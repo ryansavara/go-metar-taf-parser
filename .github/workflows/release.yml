@@ -42,7 +42,7 @@ jobs:
             ./cmd/metar-taf-parser/
 
       - name: Upload artifact
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd6a33d72436c910606 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: metar-taf-parser-${{ matrix.goos }}-${{ matrix.goarch }}
           path: release/*
