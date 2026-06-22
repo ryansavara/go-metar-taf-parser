@@ -24,9 +24,15 @@ profile.cov
 go.work
 go.work.sum
 
+# Built CLI binary
+/metar-taf-parser
+/main
+
 # env file
 .env
 
 # Editor/IDE
 # .idea/
 # .vscode/
+
+

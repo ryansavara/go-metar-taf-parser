@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@f111f3307d8850f501ac00838988667aad0a3b30 # v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Build
+        shell: bash
+        run: |
+          ext=""
+          [ "${{ matrix.goos }}" = "windows" ] && ext=".exe"
+          mkdir -p release
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -o "release/metar-taf-parser-${{ matrix.goos }}-${{ matrix.goarch }}${ext}" \
+            ./cmd/metar-taf-parser/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd6a33d72436c910606 # v4
+        with:
+          name: metar-taf-parser-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: release/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          path: release
+
+      - name: Create release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2
+        with:
+          files: release/**/*
+
+      - name: Notify Go module proxy
+        run: GOPROXY=https://proxy.golang.org,direct go list -m "github.com/ryansavara/metar-taf-parser@${{ github.ref_name }}"
+
+      - name: Request pkg.go.dev reindex
+        run: |
+          curl -s "https://pkg.go.dev/fetch/github.com/ryansavara/metar-taf-parser@${{ github.ref_name }}"

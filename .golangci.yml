@@ -1,0 +1,63 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - containedctx
+    - contextcheck
+    - cyclop
+    - depguard
+    - dupword
+    - errchkjson
+    - exhaustive
+    - exhaustruct
+    - forcetypeassert
+    - funlen
+    - gochecknoglobals
+    - godox
+    - gosmopolitan
+    - inamedparam
+    - ireturn
+    - lll
+    - mnd
+    - musttag
+    - nlreturn
+    - paralleltest
+    - tagliatelle
+    - testpackage
+    - unparam
+    - wrapcheck
+    - gocognit
+    - maintidx
+    - nestif
+    - varnamelen
+    - wsl
+    - wsl_v5
+  settings:
+    dupl:
+      threshold: 200
+    goconst:
+      min-len: 2
+      min-occurrences: 4
+    gocyclo:
+      min-complexity: 25
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

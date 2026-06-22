@@ -1,0 +1,33 @@
+name: Fuzz
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions: {}
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version-file: "go.mod"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Fuzz (2m per target)
+        run: |
+          go test -fuzz='^FuzzParseMetar$' -fuzztime=2m -count=1 .
+          go test -fuzz='^FuzzParseTAF$' -fuzztime=2m -count=1 .
+          go test -fuzz='^FuzzParseMetarDated$' -fuzztime=2m -count=1 .
+          go test -fuzz='^FuzzParseTAFDated$' -fuzztime=2m -count=1 .
+          go test -fuzz='^FuzzParseTAFAsForecast$' -fuzztime=2m -count=1 .
+          go test -fuzz='^FuzzGetCompositeForecastForDate$' -fuzztime=2m -count=1 .

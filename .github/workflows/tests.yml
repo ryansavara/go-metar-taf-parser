@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+
+permissions: {}
+
+jobs:
+  Verify-App-Builds-and-Tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version-file: "go.mod"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Verify Dependencies
+        run: go mod verify
+
+      - name: Run Tests
+        run: go test -v -race -cover ./...
+
+      - name: Run Fuzz Seed Corpus
+        run: go test -run=^Fuzz -count=1 ./...
