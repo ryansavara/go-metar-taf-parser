@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	metartafparser "github.com/ryansavara/metar-taf-parser"
+	metartafparser "github.com/ryansavara/go-metar-taf-parser"
 )
 
 func TestParseAuto_METAR(t *testing.T) {

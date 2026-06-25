@@ -1,4 +1,4 @@
-# AGENTS.md — metar-taf-parser
+# AGENTS.md — go-metar-taf-parser
 
 Single-package Go library (`package metartafparser`) for parsing METAR and TAF aviation weather reports. CLI entrypoint at `cmd/metar-taf-parser`.
 
@@ -58,7 +58,7 @@ Always run `make lint && make test` before commits.
 
 ## Key details
 
-- **No external dependencies** — pure stdlib (Go 1.25.7). Module `github.com/ryansavara/metar-taf-parser`.
+- **No external dependencies** — pure stdlib (Go 1.25.7). Module `github.com/ryansavara/go-metar-taf-parser`.
 - Formatting: `gofmt` + `goimports` enforced by golangci-lint.
 - CLI auto-detects METAR vs TAF, exits non-zero on parse failure, outputs indented JSON. Supports input via argument or stdin.
 - Date hydration converts day/hour/minute timestamps to absolute Unix ms using `determineReportDate` (tries ±1 month, picks closest to issued date).

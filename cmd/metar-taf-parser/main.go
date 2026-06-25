@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	metartafparser "github.com/ryansavara/metar-taf-parser"
+	metartafparser "github.com/ryansavara/go-metar-taf-parser"
 )
 
 var errInvalidInput = errors.New("invalid input")

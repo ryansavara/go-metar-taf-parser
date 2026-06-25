@@ -1,18 +1,18 @@
 # go-metar-taf-parser
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/ryansavara/metar-taf-parser.svg)](https://pkg.go.dev/github.com/ryansavara/metar-taf-parser)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/ryansavara/metar-taf-parser)](https://github.com/ryansavara/metar-taf-parser)
-[![GitHub Release](https://img.shields.io/github/v/release/ryansavara/metar-taf-parser)](https://github.com/ryansavara/metar-taf-parser/releases)
-[![License](https://img.shields.io/github/license/ryansavara/metar-taf-parser)](LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/ryansavara/go-metar-taf-parser.svg)](https://pkg.go.dev/github.com/ryansavara/go-metar-taf-parser)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/ryansavara/go-metar-taf-parser)](https://github.com/ryansavara/go-metar-taf-parser)
+[![GitHub Release](https://img.shields.io/github/v/release/ryansavara/go-metar-taf-parser)](https://github.com/ryansavara/go-metar-taf-parser/releases)
+[![License](https://img.shields.io/github/license/ryansavara/go-metar-taf-parser)](LICENSE)
 
 A Go library (Go 1.25.7) for parsing METAR and TAF aviation weather reports. This is a Go conversion of the [TypeScript metar-taf-parser](https://github.com/aeharding/metar-taf-parser).
 
 ```
-go get github.com/ryansavara/metar-taf-parser
+go get github.com/ryansavara/go-metar-taf-parser
 ```
 
 ```go
-import metartafparser "github.com/ryansavara/metar-taf-parser"
+import metartafparser "github.com/ryansavara/go-metar-taf-parser"
 ```
 
 ---
@@ -20,7 +20,7 @@ import metartafparser "github.com/ryansavara/metar-taf-parser"
 ## Quick Start
 
 ```go
-import metartafparser "github.com/ryansavara/metar-taf-parser"
+import metartafparser "github.com/ryansavara/go-metar-taf-parser"
 
 // Parse a METAR
 metar, err := metartafparser.ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 SLP132 T01440117", nil)
@@ -550,7 +550,7 @@ A command-line tool is available at `cmd/metar-taf-parser`:
 
 ```text
 # Install
-go install github.com/ryansavara/metar-taf-parser/cmd/metar-taf-parser@latest
+go install github.com/ryansavara/go-metar-taf-parser/cmd/metar-taf-parser@latest
 
 # Parse as argument
 metar-taf-parser "METAR KLAX 121653Z 27008KT 10SM FEW020 18/13 A2992"
@@ -564,11 +564,11 @@ The CLI auto-detects METAR vs TAF, outputs indented JSON, and exits non-zero on 
 
 ### Cross-Platform Builds
 
-Pre-built binaries for Linux, macOS, and Windows are attached to each [release](https://github.com/ryansavara/metar-taf-parser/releases). To build from source:
+Pre-built binaries for Linux, macOS, and Windows are attached to each [release](https://github.com/ryansavara/go-metar-taf-parser/releases). To build from source:
 
 ```text
-git clone https://github.com/ryansavara/metar-taf-parser.git
-cd metar-taf-parser
+git clone https://github.com/ryansavara/go-metar-taf-parser.git
+cd go-metar-taf-parser
 go build ./cmd/metar-taf-parser/
 ```
 
