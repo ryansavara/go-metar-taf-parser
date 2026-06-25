@@ -73,8 +73,8 @@ jobs:
           files: release/**/*
 
       - name: Notify Go module proxy
-        run: GOPROXY=https://proxy.golang.org,direct go list -m "github.com/ryansavara/metar-taf-parser@${{ github.ref_name }}"
+        run: GOPROXY=https://proxy.golang.org,direct go list -m "github.com/ryansavara/go-metar-taf-parser@${{ github.ref_name }}"
 
       - name: Request pkg.go.dev reindex
         run: |
-          curl -s "https://pkg.go.dev/fetch/github.com/ryansavara/metar-taf-parser@${{ github.ref_name }}"
+          curl -s "https://pkg.go.dev/fetch/github.com/ryansavara/go-metar-taf-parser@${{ github.ref_name }}"
