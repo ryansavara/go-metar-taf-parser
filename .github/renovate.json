@@ -3,5 +3,6 @@
   "extends": [
     "config:recommended",
     ":disableDependencyDashboard"
-  ]
+  ],
+  "minimumReleaseAge": "14 days",
 }
