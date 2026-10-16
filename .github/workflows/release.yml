@@ -5,12 +5,67 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag to release, e.g. v0.0.6. Used by the tag workflow.'
+        required: false
+        type: string
 
-permissions:
-  contents: write
+permissions: {}
+
+concurrency:
+  group: release-${{ github.event.inputs.version || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
+  resolve-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps:
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        run: |
+          tag="${{ github.event.inputs.version }}"
+          if [ -z "${tag}" ]; then
+            tag="${{ github.ref_name }}"
+          fi
+          version="${tag#v}"
+          if [[ ! "${version}" =~ ^0\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid release reference '${tag}'. Expected a v0.#.# tag (e.g. v0.0.6)."
+            exit 1
+          fi
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+
+  checks:
+    needs: resolve-tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.resolve-tag.outputs.tag }}
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: "go.mod"
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -race -cover ./...
+
+      - name: Run vet
+        run: go vet ./...
+
   build:
+    needs: [resolve-tag, checks]
     strategy:
       matrix:
         goos: [linux, darwin, windows]
@@ -24,6 +79,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ needs.resolve-tag.outputs.tag }}
           persist-credentials: false
 
       - name: Set up Go
@@ -48,13 +104,17 @@ jobs:
           path: release/*
 
   release:
-    needs: build
+    needs: [resolve-tag, checks, build]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ needs.resolve-tag.outputs.tag }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Go
@@ -67,14 +127,35 @@ jobs:
         with:
           path: release
 
+      - name: Generate checksums
+        shell: bash
+        run: |
+          find release -type f -name 'metar-taf-parser-*' -exec sha256sum {} \; | sed 's|release/[^/]*/||' > release/SHA256SUMS
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          tag="${{ needs.resolve-tag.outputs.tag }}"
+          prev="$(git tag --list 'v0.*' --sort=-v:refname | awk -v t="${tag}" '$0 < t' | head -n1)"
+          if [ -n "${prev}" ]; then
+            printf '## Changes since %s\n\n' "${prev}" > body.md
+            git log --oneline "${prev}..${tag}" >> body.md
+          else
+            printf '## Initial release %s\n' "${tag}" > body.md
+          fi
+
       - name: Create release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
+          tag_name: ${{ needs.resolve-tag.outputs.tag }}
           files: release/**/*
+          body_path: body.md
+          generate_release_notes: true
 
       - name: Notify Go module proxy
-        run: GOPROXY=https://proxy.golang.org,direct go list -m "github.com/ryansavara/go-metar-taf-parser@${{ github.ref_name }}"
+        run: GOPROXY=https://proxy.golang.org,direct go list -m "github.com/ryansavara/go-metar-taf-parser@${{ needs.resolve-tag.outputs.tag }}"
 
       - name: Request pkg.go.dev reindex
         run: |
-          curl -s "https://pkg.go.dev/fetch/github.com/ryansavara/go-metar-taf-parser@${{ github.ref_name }}"
+          curl -s "https://pkg.go.dev/fetch/github.com/ryansavara/go-metar-taf-parser@${{ needs.resolve-tag.outputs.tag }}"

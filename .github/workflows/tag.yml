@@ -1,0 +1,77 @@
+name: Tag Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 0.0.6 or v0.0.6. Leave empty to auto-increment the patch of the latest v0.#.# tag.'
+        required: false
+        type: string
+
+permissions: {}
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: "go.mod"
+
+      - name: Compute version
+        id: version
+        shell: bash
+        run: |
+          input="${{ github.event.inputs.version }}"
+          if [ -n "${input}" ]; then
+            version="${input#v}"
+          else
+            latest="$(git tag --list 'v0.*' --sort=-v:refname | head -n1)"
+            if [ -z "${latest}" ]; then
+              version="0.0.1"
+            else
+              base="${latest#v}"
+              major="${base%%.*}"
+              rest="${base#*.}"
+              minor="${rest%%.*}"
+              patch="${rest#*.}"
+              version="${major}.${minor}.$((patch + 1))"
+            fi
+          fi
+          if [[ ! "${version}" =~ ^0\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version '${input}'. Expected a v0.#.# version (e.g. v0.0.6)."
+            exit 1
+          fi
+          tag="v${version}"
+          if git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+            echo "::error::Tag '${tag}' already exists."
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        shell: bash
+        run: |
+          go test ./...
+          go vet ./...
+
+      - name: Create tag
+        run: git tag "${{ steps.version.outputs.tag }}"
+
+      - name: Push tag
+        run: git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Dispatch release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml -f version="${{ steps.version.outputs.tag }}"
