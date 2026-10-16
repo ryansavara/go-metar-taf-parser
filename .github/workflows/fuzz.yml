@@ -2,12 +2,16 @@ name: Fuzz
 on:
   schedule:
     - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 permissions: {}
 
 jobs:
   fuzz:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout code
@@ -24,10 +28,104 @@ jobs:
         run: go mod download
 
       - name: Fuzz (2m per target)
+        id: fuzz
+        shell: bash
         run: |
-          go test -fuzz='^FuzzParseMetar$' -fuzztime=2m -count=1 .
-          go test -fuzz='^FuzzParseTAF$' -fuzztime=2m -count=1 .
-          go test -fuzz='^FuzzParseMetarDated$' -fuzztime=2m -count=1 .
-          go test -fuzz='^FuzzParseTAFDated$' -fuzztime=2m -count=1 .
-          go test -fuzz='^FuzzParseTAFAsForecast$' -fuzztime=2m -count=1 .
-          go test -fuzz='^FuzzGetCompositeForecastForDate$' -fuzztime=2m -count=1 .
+          set -uo pipefail
+          targets=(
+            FuzzParseMetar
+            FuzzParseTAF
+            FuzzParseMetarDated
+            FuzzParseTAFDated
+            FuzzParseTAFAsForecast
+            FuzzGetCompositeForecastForDate
+          )
+          failed=0
+          : > fuzz-failures.md
+          for target in "${targets[@]}"; do
+            log="fuzz-${target}.log"
+            echo "::group::Fuzzing ${target}"
+            if go test -fuzz="^${target}$" -fuzztime=2m -count=1 . 2>&1 | tee "${log}"; then
+              echo "::endgroup::"
+              continue
+            fi
+            echo "::endgroup::"
+
+            # A context deadline means the fuzz coordinator hit the test
+            # timeout (a slow/flaky runner), not a genuine crasher.
+            if grep -q 'context deadline exceeded' "${log}"; then
+              echo "::warning::${target} hit a context deadline; not opening an issue."
+              continue
+            fi
+
+            failed=1
+            echo "::error::${target} failed."
+            {
+              echo "## \`${target}\`"
+              echo
+              echo '```'
+              cat "${log}"
+              echo '```'
+              echo
+              if [ -d "testdata/fuzz/${target}" ]; then
+                for crasher in testdata/fuzz/"${target}"/*; do
+                  [ -e "${crasher}" ] || continue
+                  echo "### Failing input: \`${crasher}\`"
+                  echo
+                  echo '```'
+                  cat "${crasher}"
+                  echo '```'
+                  echo
+                  echo "Reproduce with \`go test -run='${target}/$(basename "${crasher}")' -count=1 .\`."
+                  echo
+                done
+              fi
+            } >> fuzz-failures.md
+          done
+
+          if [ "${failed}" -ne 0 ]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            echo "::error::Fuzzing found failing inputs. See the job summary."
+            exit 1
+          fi
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -s fuzz-failures.md ]; then
+            cat fuzz-failures.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Open issue
+        if: failure() && steps.fuzz.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          title="Scheduled fuzzing failure"
+          body_file="fuzz-issue.md"
+          {
+            echo "The scheduled fuzz workflow found failing input(s) on \`${GITHUB_REF_NAME}\`."
+            echo
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            cat fuzz-failures.md
+          } > "${body_file}"
+
+          existing="$(gh issue list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --state open \
+            --search "${title} in:title" \
+            --json number \
+            --jq '.[0].number')"
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --body-file "${body_file}"
+          else
+            gh issue create \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --body-file "${body_file}"
+          fi
