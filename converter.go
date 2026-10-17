@@ -74,7 +74,11 @@ func convertFractionalAmount(input string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return whole + frac, nil
+	sum := whole + frac
+	if math.IsInf(sum, 0) || math.IsNaN(sum) {
+		return 0, strconv.ErrRange
+	}
+	return sum, nil
 }
 
 func parseFraction(input string) (float64, error) {
@@ -97,7 +101,11 @@ func parseFraction(input string) (float64, error) {
 	if bottom == 0 {
 		return 0, nil
 	}
-	return math.Round(top/bottom*100) / 100, nil
+	result := math.Round(top/bottom*100) / 100
+	if math.IsInf(result, 0) || math.IsNaN(result) {
+		return 0, strconv.ErrRange
+	}
+	return result, nil
 }
 
 func convertTemperature(input string) (float64, error) {
