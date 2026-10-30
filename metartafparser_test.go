@@ -294,6 +294,29 @@ func TestMetarParserAutoAsStation(t *testing.T) {
 	assertIntPtr(t, result.Minute, 50, "minute")
 }
 
+func TestMetarParserMissingDeliveryTimeDoesNotDropWind(t *testing.T) {
+	cases := []string{
+		"KJFK 18003KT 10SM FEW015 10/08 Q1013",
+		"METAR KJFK 18003KT 10SM FEW015 10/08 Q1013",
+	}
+
+	for _, input := range cases {
+		t.Run(input, func(t *testing.T) {
+			result, err := ParseMetar(input, nil)
+			if err != nil {
+				t.Fatalf("ParseMetar(%q) error: %v", input, err)
+			}
+
+			assertNil(t, result.Day, "day")
+			assertNil(t, result.Hour, "hour")
+			assertNotNil(t, result.Wind, "wind")
+			assertEqual(t, result.Wind.Speed, 3, "wind.speed")
+			assertNotNil(t, result.Visibility, "visibility")
+			assertEqual(t, result.Visibility.Value, 10.0, "visibility.value")
+		})
+	}
+}
+
 func TestMetarParserAutoFlag(t *testing.T) {
 	input := "AUTO LSZL 061950Z 10002KT 9999NDV NCD 01/M00 Q1015 RMK="
 	result, err := ParseMetar(input, nil)

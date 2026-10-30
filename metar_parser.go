@@ -55,7 +55,9 @@ func (p *metarParser) Parse(input string) (*Metar, error) {
 	}
 
 	timeVals := parseDeliveryTime(tokens[idx])
-	idx++
+	if timeVals != nil {
+		idx++
+	}
 
 	metar := &Metar{
 		Type:    metarType,
