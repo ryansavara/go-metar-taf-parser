@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	metartafparser "github.com/ryansavara/go-metar-taf-parser"
@@ -98,4 +99,21 @@ func TestIsMetarValid_empty(t *testing.T) {
 	if isMetarValid(&metartafparser.Metar{}) {
 		t.Error("expected false for empty Metar")
 	}
+}
+
+// FuzzParseAuto verifies that CLI auto-detection rejects reports containing
+// lowercase characters.
+func FuzzParseAuto(f *testing.F) {
+	f.Add("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992")
+	f.Add("TAF KLAX 140520Z 1406/1512 05005KT P6SM FEW010")
+	f.Add("taf KJFK 121720Z 1218/1324 27008KT P6SM FEW020")
+	f.Add("kjfk 121720Z 27008KT P6SM FEW020")
+
+	f.Fuzz(func(t *testing.T, input string) {
+		trimmed := strings.TrimSpace(input)
+		_, err := parseAuto(input)
+		if trimmed != "" && trimmed != strings.ToUpper(trimmed) && err == nil {
+			t.Errorf("parseAuto accepted input containing lowercase characters: %q", input)
+		}
+	})
 }

@@ -3,6 +3,7 @@ package metartafparser
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -32,6 +33,14 @@ func FuzzParseMetar(f *testing.F) {
 		"CYVM 282100Z 36028G36KT 1SM -SN DRSN VCBLSN OVC008 M03/M04 A2935 RMK SN2ST8 LAST STFFD OBS/NXT 291200UTC SLP940",
 		"KATL 022045Z 00000KT 10SM SCT120 00/M08 A2996 R12/1000V1200U",
 		"LFRM 081630Z AUTO 30007KT 260V360 9999 24/15 Q1008 TEMPO SHRA BECMG SKC",
+		"KJFK 18003KT 10SM FEW015 10/08 Q1013",
+		"METAR KJFK 18003KT 10SM FEW015 10/08 Q1013",
+		"METAR COR AUTO KJFK 121751Z 18003KT 10SM FEW015 10/08 Q1013",
+		"KJFK 121751Z 180100KT 10SM FEW015 10/08 Q1013",
+		"KJFK 121751Z 180100G120KT 10SM FEW015 10/08 Q1013",
+		"KJFK 121751Z WS020/240100KT 10SM FEW015 10/08 Q1013",
+		"KJFK 121751Z 18003KTEXTRA 10SM FEW015 10/08 Q1013",
+		"KTTN 051853Z 04011KT 1 1/2SM VCTS SN FZFG BKN003 OVC010 M02/M02 A3006 RMK AO2 52032 SLP176 P0002 T10171017=",
 	}
 	for _, s := range seeds {
 		f.Add(s)
@@ -69,6 +78,11 @@ func FuzzParseTAF(f *testing.F) {
 		"TAF AMD CZBF 300939Z 3010/3022 VRB03KT 6SM -SN OVC015 TEMPO 3010/3012 11/2SM -SN OVC009 \nFM301200 10008KT 2SM -SN OVC010 TEMPO 3012/3022 3/4SM -SN VV007 RMK FCST BASED ON AUTO OBS. NXT FCST BY 301400Z",
 		"TAF AMD KGWO 161553Z 1616/1712 21005KT 4SM -TSRA BR SCT010 OVC070CB",
 		"TAF YWLM 270209Z 2703/2800 30014KT 9999 -SHRA NSC FM270400 28007KT 9999 -SHRA SCT040 FM270700 03010KT 9999 -SHRA SCT040 FM271200 30008KT CAVOK FM272100 29014KT CAVOK INTER 2703/2709 30018G30KT 5000 SHRA SCT015 BKN040 FEW040TCU PROB30 INTER 2704/2709 VRB25G45KT 2000 TSRAGR BKN010 SCT040CB",
+		"TAF KAAA 121720Z 1218/1324 18005KT 9999 FEW020 RMK TSRA BKN020 AUTO",
+		"TAF CZBF 300939Z 3010/3022 VRB03KT 6SM -SN OVC015 RMK FCST BASED ON AUTO OBS. NXT FCST BY 301400Z",
+		"TAF KAAA 121940Z 1220/1308 18005KT 9999 FEW020 TEMPO 1221/1223 2SM -SN TX30/1223Z FM130000 20010KT 9999 SCT020 TN05/1305Z FM130600 18005KT 9999 FEW020",
+		"TAF CYVR 152340Z 1600/1706 29015KT P6SM FEW015 FM162200 28010KT P6SM SKC RMK NXT FCST BY 160300Z 52032",
+		"taf KJFK 121720Z 1218/1324 27008KT P6SM FEW020",
 	}
 	for _, s := range seeds {
 		f.Add(s)
@@ -179,6 +193,45 @@ func FuzzParseTAFAsForecast(f *testing.F) {
 			if jsonErr != nil {
 				t.Errorf("json.Marshal failed: %v", jsonErr)
 			}
+		}
+	})
+}
+
+// FuzzDateHydrationLocation verifies that dated METAR and TAF parsing produce
+// the same results when the issued timestamp is expressed in different time
+// locations.
+func FuzzDateHydrationLocation(f *testing.F) {
+	f.Add(
+		"KAAA 010030Z 18005KT 10SM FEW020 10/08 Q1013",
+		time.Date(2024, 1, 1, 0, 30, 0, 0, time.UTC).UnixMilli(),
+		300,
+	)
+	f.Add(
+		"TAF KAAA 010030Z 0100/0124 18005KT 9999 FEW020 TX30/0118Z TN15/0110Z",
+		time.Date(2024, 1, 1, 0, 30, 0, 0, time.UTC).UnixMilli(),
+		-480,
+	)
+	f.Fuzz(func(t *testing.T, input string, issued int64, offsetMinutes int) {
+		offsetMinutes %= 24 * 60
+		utc := time.UnixMilli(issued).UTC()
+		local := utc.In(time.FixedZone("fuzz", offsetMinutes*60))
+
+		localMetar, localMetarErr := ParseMetarDated(input, local, nil)
+		utcMetar, utcMetarErr := ParseMetarDated(input, utc, nil)
+		if (localMetarErr == nil) != (utcMetarErr == nil) {
+			t.Fatalf("METAR result depends on location: local err=%v, UTC err=%v", localMetarErr, utcMetarErr)
+		}
+		if localMetarErr == nil && !reflect.DeepEqual(localMetar, utcMetar) {
+			t.Errorf("METAR result depends on location:\nlocal: %#v\nUTC:   %#v", localMetar, utcMetar)
+		}
+
+		localTAF, localTAFErr := ParseTAFDated(input, local, nil)
+		utcTAF, utcTAFErr := ParseTAFDated(input, utc, nil)
+		if (localTAFErr == nil) != (utcTAFErr == nil) {
+			t.Fatalf("TAF result depends on location: local err=%v, UTC err=%v", localTAFErr, utcTAFErr)
+		}
+		if localTAFErr == nil && !reflect.DeepEqual(localTAF, utcTAF) {
+			t.Errorf("TAF result depends on location:\nlocal: %#v\nUTC:   %#v", localTAF, utcTAF)
 		}
 	})
 }

@@ -33,19 +33,23 @@ jobs:
         run: |
           set -uo pipefail
           targets=(
-            FuzzParseMetar
-            FuzzParseTAF
-            FuzzParseMetarDated
-            FuzzParseTAFDated
-            FuzzParseTAFAsForecast
-            FuzzGetCompositeForecastForDate
+            'FuzzParseMetar|.'
+            'FuzzParseTAF|.'
+            'FuzzParseMetarDated|.'
+            'FuzzParseTAFDated|.'
+            'FuzzParseTAFAsForecast|.'
+            'FuzzGetCompositeForecastForDate|.'
+            'FuzzDateHydrationLocation|.'
+            'FuzzParseAuto|./cmd/metar-taf-parser'
           )
           failed=0
           : > fuzz-failures.md
-          for target in "${targets[@]}"; do
+          for target_spec in "${targets[@]}"; do
+            target="${target_spec%%|*}"
+            package="${target_spec#*|}"
             log="fuzz-${target}.log"
             echo "::group::Fuzzing ${target}"
-            if go test -fuzz="^${target}$" -fuzztime=2m -count=1 . 2>&1 | tee "${log}"; then
+            if go test -fuzz="^${target}$" -fuzztime=2m -count=1 "${package}" 2>&1 | tee "${log}"; then
               echo "::endgroup::"
               continue
             fi
@@ -76,7 +80,7 @@ jobs:
                   cat "${crasher}"
                   echo '```'
                   echo
-                  echo "Reproduce with \`go test -run='${target}/$(basename "${crasher}")' -count=1 .\`."
+                  echo "Reproduce with \`go test -run='${target}/$(basename "${crasher}")' -count=1 ${package}\`."
                   echo
                 done
               fi

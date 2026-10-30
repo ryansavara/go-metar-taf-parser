@@ -12,7 +12,7 @@ Single-package Go library (`package metartafparser`) for parsing METAR and TAF a
 | `make build` | `go build ./...` |
 | `go build ./cmd/metar-taf-parser/` | Build CLI binary |
 | `go test -run TestName` | Run a single test (stdlib `testing`, no testify) |
-| `make fuzz-shortest` | 3s fuzz tests for all 6 fuzz targets |
+| `make fuzz-shortest` | 3s fuzz tests for all 8 fuzz targets |
 | `make fuzz-shorter` | 10s fuzz tests |
 | `make fuzz-short` | 30s fuzz tests |
 | `make fuzz-long` | 10m fuzz tests |
