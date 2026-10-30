@@ -73,6 +73,10 @@ func ParseTAFAsForecast(rawTAF string, issued time.Time, opts *ParseOptions) (*F
 // ============================================================
 
 func determineReportDate(date time.Time, day, hour *int, minute ...int) time.Time {
+	// Normalize to UTC so that day/hour groups are resolved independently of
+	// the input time's location. TAF/METAR day/hour groups are UTC.
+	date = date.UTC()
+
 	if day == nil || hour == nil {
 		return date
 	}
@@ -102,24 +106,27 @@ func determineReportDate(date time.Time, day, hour *int, minute ...int) time.Tim
 }
 
 func setDateComponents(date time.Time, day, hour, minute int) time.Time {
+	// Day/hour groups are UTC, independent of the input time's location.
+	date = date.UTC()
 	y, m, _ := date.Date()
-	loc := date.Location()
-	return time.Date(y, m, day, hour, minute, 0, 0, loc)
+	return time.Date(y, m, day, hour, minute, 0, 0, time.UTC)
 }
 
 func addMonthsUTC(date time.Time, count int) time.Time {
+	// Day/hour groups are UTC, independent of the input time's location.
+	date = date.UTC()
 	y, m, d := date.Date()
 	newM := int(m) + count
 	newY := y + (newM-1)/12
 	newM = ((newM - 1) % 12) + 1
 
 	// Handle day overflow
-	firstOfMonth := time.Date(newY, time.Month(newM), 1, 0, 0, 0, 0, date.Location())
+	firstOfMonth := time.Date(newY, time.Month(newM), 1, 0, 0, 0, 0, time.UTC)
 	daysInMonth := firstOfMonth.AddDate(0, 1, -1).Day()
 	if d > daysInMonth {
 		d = daysInMonth
 	}
-	return time.Date(newY, time.Month(newM), d, date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), date.Location())
+	return time.Date(newY, time.Month(newM), d, date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), time.UTC)
 }
 
 // metarDatesHydrator creates a MetarDated from a Metar and issued date.

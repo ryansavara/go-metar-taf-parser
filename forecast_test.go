@@ -211,6 +211,66 @@ func TestGetForecastFromTAFMonthRollover(t *testing.T) {
 	assertEqual(t, fc.End, time.Date(2022, 5, 2, 0, 0, 0, 0, time.UTC).UnixMilli(), "end")
 }
 
+func TestParseTAFAsForecastNonUTCOffsetMatchesUTC(t *testing.T) {
+	const code = "TAF KAAA 010030Z 0100/0124 18005KT 9999 FEW020 " +
+		"TX30/0118Z TN15/0110Z"
+
+	local := time.Date(
+		2024, 1, 1, 0, 30, 0, 0,
+		time.FixedZone("PLUS5", 5*3600),
+	)
+	utc := local.UTC()
+
+	localTAF, err := ParseTAFDated(code, local, nil)
+	if err != nil {
+		t.Fatalf("ParseTAFDated(local) error: %v", err)
+	}
+	utcTAF, err := ParseTAFDated(code, utc, nil)
+	if err != nil {
+		t.Fatalf("ParseTAFDated(utc) error: %v", err)
+	}
+
+	localFC, err := ParseTAFAsForecast(code, local, nil)
+	if err != nil {
+		t.Fatalf("ParseTAFAsForecast(local) error: %v", err)
+	}
+	utcFC, err := ParseTAFAsForecast(code, utc, nil)
+	if err != nil {
+		t.Fatalf("ParseTAFAsForecast(utc) error: %v", err)
+	}
+
+	assertEqual(t, localFC.Issued, utcFC.Issued, "forecast.issued")
+	assertEqual(t, localFC.Start, utcFC.Start, "forecast.start")
+	assertEqual(t, localFC.End, utcFC.End, "forecast.end")
+
+	// The forecast bounds and dated validity must describe the same period.
+	assertEqual(t, localFC.Start, localTAF.ValidityDated.Start, "local forecast/validity start")
+	assertEqual(t, localFC.End, localTAF.ValidityDated.End, "local forecast/validity end")
+	assertEqual(t, utcFC.Start, utcTAF.ValidityDated.Start, "utc forecast/validity start")
+	assertEqual(t, utcFC.End, utcTAF.ValidityDated.End, "utc forecast/validity end")
+
+	if localFC.MaxTemperature != nil {
+		assertNotNil(t, utcFC.MaxTemperature, "utc maxTemperature")
+		if utcFC.MaxTemperature != nil {
+			assertEqual(t,
+				localFC.MaxTemperature.Date,
+				utcFC.MaxTemperature.Date,
+				"maxTemperature.date",
+			)
+		}
+	}
+	if localFC.MinTemperature != nil {
+		assertNotNil(t, utcFC.MinTemperature, "utc minTemperature")
+		if utcFC.MinTemperature != nil {
+			assertEqual(t,
+				localFC.MinTemperature.Date,
+				utcFC.MinTemperature.Date,
+				"minTemperature.date",
+			)
+		}
+	}
+}
+
 // ============================================================
 // GetCompositeForecastForDate Tests
 // ============================================================

@@ -1078,3 +1078,103 @@ func TestFormatMsgOutOfRange(t *testing.T) {
 	}
 	assertEqual(t, *r, "hello foo world {5}", "unmatched index preserved")
 }
+
+// ============================================================
+// Date hydration location-independence tests
+// ============================================================
+
+func TestDetermineReportDateIgnoresInputLocation(t *testing.T) {
+	day, hour := 1, 0
+
+	local := time.Date(
+		2024, 1, 1, 0, 30, 0, 0,
+		time.FixedZone("PLUS5", 5*3600),
+	)
+	utc := local.UTC()
+
+	localResult := determineReportDate(local, &day, &hour)
+	utcResult := determineReportDate(utc, &day, &hour)
+
+	assertEqual(t,
+		localResult.UnixMilli(),
+		utcResult.UnixMilli(),
+		"determineReportDate must not depend on input location",
+	)
+}
+
+func TestParseTAFDatedNonUTCOffsetMatchesUTC(t *testing.T) {
+	const code = "TAF KAAA 010030Z 0100/0124 18005KT 9999 FEW020 " +
+		"TEMPO 0106/0109 2SM -SN FM011200 20010KT 9999 SCT020 " +
+		"TX30/0118Z TN15/0110Z"
+
+	local := time.Date(
+		2024, 1, 1, 0, 30, 0, 0,
+		time.FixedZone("PLUS5", 5*3600),
+	)
+	utc := local.UTC()
+
+	localTAF, err := ParseTAFDated(code, local, nil)
+	if err != nil {
+		t.Fatalf("ParseTAFDated(local) error: %v", err)
+	}
+	utcTAF, err := ParseTAFDated(code, utc, nil)
+	if err != nil {
+		t.Fatalf("ParseTAFDated(utc) error: %v", err)
+	}
+
+	assertEqual(t, localTAF.Issued, utcTAF.Issued, "issued")
+	assertEqual(t, localTAF.ValidityDated.Start, utcTAF.ValidityDated.Start, "validity.start")
+	assertEqual(t, localTAF.ValidityDated.End, utcTAF.ValidityDated.End, "validity.end")
+
+	if len(localTAF.Trends) != len(utcTAF.Trends) {
+		t.Fatalf("trend count mismatch: local=%d utc=%d",
+			len(localTAF.Trends), len(utcTAF.Trends))
+	}
+	for i := range localTAF.Trends {
+		localTrend := localTAF.Trends[i]
+		utcTrend := utcTAF.Trends[i]
+
+		if (localTrend.ValidityStartMs == nil) != (utcTrend.ValidityStartMs == nil) {
+			t.Fatalf("trend[%d].validityStartMs nil mismatch", i)
+		}
+		if localTrend.ValidityStartMs != nil {
+			assertEqual(t,
+				*localTrend.ValidityStartMs,
+				*utcTrend.ValidityStartMs,
+				fmt.Sprintf("trend[%d].validityStartMs", i),
+			)
+		}
+
+		if (localTrend.ValidityEndMs == nil) != (utcTrend.ValidityEndMs == nil) {
+			t.Fatalf("trend[%d].validityEndMs nil mismatch", i)
+		}
+		if localTrend.ValidityEndMs != nil {
+			assertEqual(t,
+				*localTrend.ValidityEndMs,
+				*utcTrend.ValidityEndMs,
+				fmt.Sprintf("trend[%d].validityEndMs", i),
+			)
+		}
+	}
+}
+
+func TestParseMetarDatedNonUTCOffsetMatchesUTC(t *testing.T) {
+	const code = "KAAA 010030Z 18005KT 10SM FEW020 10/08 Q1013"
+
+	local := time.Date(
+		2024, 1, 1, 0, 30, 0, 0,
+		time.FixedZone("PLUS5", 5*3600),
+	)
+	utc := local.UTC()
+
+	localMetar, err := ParseMetarDated(code, local, nil)
+	if err != nil {
+		t.Fatalf("ParseMetarDated(local) error: %v", err)
+	}
+	utcMetar, err := ParseMetarDated(code, utc, nil)
+	if err != nil {
+		t.Fatalf("ParseMetarDated(utc) error: %v", err)
+	}
+
+	assertEqual(t, localMetar.Issued, utcMetar.Issued, "issued")
+}
