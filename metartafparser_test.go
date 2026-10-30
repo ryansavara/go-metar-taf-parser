@@ -576,6 +576,39 @@ func TestMetarParserRunwayDeposit(t *testing.T) {
 	assertEqual(t, len(result.Remarks), 1, "remarks length")
 }
 
+func TestMetarParserHourlyPressureRemarkDescription(t *testing.T) {
+	const code = "KTTN 051853Z 04011KT 1 1/2SM VCTS SN FZFG BKN003 OVC010 M02/M02 A3006 RMK AO2 52032 SLP176 P0002 T10171017="
+
+	result, err := ParseMetar(code, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+
+	const want = "steady or unsteady increase of 3.2 hectopascals in the past 3 hours"
+
+	var found bool
+	for _, r := range result.Remarks {
+		if r.Type != RemarkTypeHourlyPressure {
+			continue
+		}
+		found = true
+		assertNotNil(t, r.Description, "description")
+		if r.Description != nil {
+			assertEqual(t, *r.Description, want, "description")
+		}
+	}
+	if !found {
+		t.Fatal("expected an HourlyPressure remark")
+	}
+
+	if result.Remark == nil {
+		t.Fatal("expected combined remark")
+	}
+	if !strings.Contains(*result.Remark, want) {
+		t.Errorf("combined remark missing hourly pressure text: %q", *result.Remark)
+	}
+}
+
 func TestMetarParserTempoRmk(t *testing.T) {
 	input := "EGLL 231250Z 14012G22KT 2000 +TSRA FG BKN008 SCT025CB OVC050 18/17 Q1010 TEMPO 1000 -SHRA RMK QFE998"
 	result, err := ParseMetar(input, nil)

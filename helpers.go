@@ -1,6 +1,9 @@
 package metartafparser
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 func splitN(s, sep string, n ...int) []string {
 	split := strings.Split(s, sep)
@@ -36,18 +39,18 @@ func resolve(obj map[string]any, path string) any {
 	parts := strings.Split(path, ".")
 	current := any(obj)
 	for _, part := range parts {
-		m, ok := current.(map[string]any)
-		if !ok {
-			if l, ok2 := current.(Locale); ok2 {
-				m = map[string]any(l)
-				ok = true
+		switch value := current.(type) {
+		case Locale:
+			current = value[part]
+		case map[string]any:
+			current = value[part]
+		case []any:
+			index, err := strconv.Atoi(part)
+			if err != nil || index < 0 || index >= len(value) {
+				return nil
 			}
-		}
-		if !ok {
-			return nil
-		}
-		current, ok = m[part]
-		if !ok {
+			current = value[index]
+		default:
 			return nil
 		}
 	}

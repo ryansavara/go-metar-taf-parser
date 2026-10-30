@@ -632,6 +632,58 @@ func TestRemarkParserHourlyPressure(t *testing.T) {
 	assertEqual(t, remarks[0].Type, RemarkTypeHourlyPressure, "type")
 }
 
+func TestRemarkParserHourlyPressureDescription(t *testing.T) {
+	parser := newRemarkParser(DefaultLocale())
+	remarks := parser.Parse("52032")
+	if len(remarks) < 1 {
+		t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+	}
+
+	r := remarks[0]
+	assertEqual(t, r.Type, RemarkTypeHourlyPressure, "type")
+	assertEqual(t, r.Raw, "52032", "raw")
+	assertFloatPtr(t, r.Value, 3.2, "value")
+	assertNotNil(t, r.Description, "description")
+	if r.Description != nil {
+		assertEqual(t,
+			*r.Description,
+			"steady or unsteady increase of 3.2 hectopascals in the past 3 hours",
+			"description",
+		)
+	}
+}
+
+func TestRemarkParserHourlyPressureBarometerCodes(t *testing.T) {
+	cases := []struct {
+		code        string
+		description string
+	}{
+		{"50012", "Increase, then decrease of 1.2 hectopascals in the past 3 hours"},
+		{"51012", "Increase, then steady, or increase then Increase more slowly of 1.2 hectopascals in the past 3 hours"},
+		{"52012", "steady or unsteady increase of 1.2 hectopascals in the past 3 hours"},
+		{"53012", "Decrease or steady, then increase; or increase then increase more rapidly of 1.2 hectopascals in the past 3 hours"},
+		{"54012", "Steady of 1.2 hectopascals in the past 3 hours"},
+		{"55012", "Decrease, then increase of 1.2 hectopascals in the past 3 hours"},
+		{"56012", "Decrease then steady; or decrease then decrease more slowly of 1.2 hectopascals in the past 3 hours"},
+		{"57012", "Steady or unsteady decrease of 1.2 hectopascals in the past 3 hours"},
+		{"58012", "Steady or increase, then decrease; or decrease then decrease more rapidly of 1.2 hectopascals in the past 3 hours"},
+	}
+
+	parser := newRemarkParser(DefaultLocale())
+	for _, tc := range cases {
+		t.Run(tc.code, func(t *testing.T) {
+			remarks := parser.Parse(tc.code)
+			if len(remarks) < 1 {
+				t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+			}
+			assertNotNil(t, remarks[0].Description, "description")
+			if remarks[0].Description != nil {
+				assertEqual(t, *remarks[0].Description, tc.description, "description")
+			}
+		})
+	}
+}
+
 func TestRemarkParserPrecipAmount24Hour(t *testing.T) {
 	parser := newRemarkParser(DefaultLocale())
 	remarks := parser.Parse("70125")

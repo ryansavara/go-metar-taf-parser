@@ -227,12 +227,12 @@ func (c *hourlyPressureRemarkCommand) Execute(code string, remarks []Remark) (st
 	change := float64(atoi(m[2])) / 10
 	barometerKey := fmt.Sprintf("Remark.Barometer.%d", codeVal)
 	barometerDesc := locStr(c.locale, barometerKey)
-	tendencyDesc := locStr(c.locale, "Remark.Pressure.Tendency")
-	var fullDesc string
-	if barometerDesc != "" && tendencyDesc != "" {
-		fullDesc = barometerDesc + " " + tendencyDesc
+	tendencyDesc := remarkDesc(c.locale, "Remark.Pressure.Tendency", fmt.Sprintf("%.1f", change))
+	var desc *string
+	if barometerDesc != "" && tendencyDesc != nil && *tendencyDesc != "" {
+		fullDesc := barometerDesc + " " + *tendencyDesc
+		desc = &fullDesc
 	}
-	desc := &fullDesc
 	remarks = append(remarks, Remark{
 		Type:        RemarkTypeHourlyPressure,
 		Description: desc,

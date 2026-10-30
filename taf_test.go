@@ -2,6 +2,7 @@ package metartafparser
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -772,6 +773,40 @@ func TestTAFParserTrendRemark(t *testing.T) {
 	if len(result.Trends) >= 3 {
 		assertNotNil(t, result.Trends[2].Remark, "trend[2].remark")
 		assertEqual(t, len(result.Trends[2].Remarks), 2, "trend[2].remarks")
+	}
+}
+
+func TestTAFParserHourlyPressureRemarkDescription(t *testing.T) {
+	const code = "TAF CYVR 152340Z 1600/1706 29015KT P6SM FEW015 FM162200 28010KT P6SM SKC RMK NXT FCST BY 160300Z 52032"
+
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+	if len(result.Trends) == 0 {
+		t.Fatal("expected at least one trend")
+	}
+
+	const want = "steady or unsteady increase of 3.2 hectopascals in the past 3 hours"
+
+	var found bool
+	for _, r := range result.Trends[0].Remarks {
+		if r.Type != RemarkTypeHourlyPressure {
+			continue
+		}
+		found = true
+		assertNotNil(t, r.Description, "description")
+		if r.Description != nil {
+			assertEqual(t, *r.Description, want, "description")
+		}
+	}
+	if !found {
+		t.Fatal("expected an HourlyPressure remark on the FM trend")
+	}
+
+	assertNotNil(t, result.Trends[0].Remark, "trend remark")
+	if result.Trends[0].Remark != nil && !strings.Contains(*result.Trends[0].Remark, want) {
+		t.Errorf("combined trend remark missing hourly pressure text: %q", *result.Trends[0].Remark)
 	}
 }
 
