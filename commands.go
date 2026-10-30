@@ -144,7 +144,7 @@ func (mainVisibilityCommand) CanParse(input string) bool {
 
 // --- windCommand ---
 
-var windRegex = regexp.MustCompile(`^(VRB|000|[0-3]\d{2})(\d{2})G?(\d{2,3})?(KT|MPS|KM\/H)?`)
+var windRegex = regexp.MustCompile(`^(VRB|000|[0-3]\d{2})(\d{2,3})G?(\d{2,3})?(KT|MPS|KM\/H)?$`)
 
 type windCommand struct{}
 
@@ -212,7 +212,7 @@ func (windVariationCommand) CanParse(input string) bool {
 
 // --- windShearCommand ---
 
-var windShearRegex = regexp.MustCompile(`^WS(\d{3})\/(\w{3})(\d{2})G?(\d{2,3})?(KT|MPS|KM\/H)`)
+var windShearRegex = regexp.MustCompile(`^WS(\d{3})\/(\w{3})(\d{2,3})G?(\d{2,3})?(KT|MPS|KM\/H)$`)
 
 type windShearCommand struct{}
 

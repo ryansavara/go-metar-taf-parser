@@ -719,6 +719,54 @@ func TestMetarParserWindAltForm(t *testing.T) {
 	}
 }
 
+func TestMetarParserThreeDigitWindSpeed(t *testing.T) {
+	input := "KJFK 121751Z 180100KT 10SM FEW015 10/08 Q1013"
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+
+	assertNotNil(t, result.Wind, "wind")
+	assertEqual(t, *result.Wind.Degrees, 180, "wind.degrees")
+	assertEqual(t, result.Wind.Speed, 100, "wind.speed")
+	assertEqual(t, result.Wind.Unit, SpeedUnitKnot, "wind.unit")
+}
+
+func TestMetarParserThreeDigitWindSpeedWithGust(t *testing.T) {
+	input := "KJFK 121751Z 180100G120KT 10SM FEW015 10/08 Q1013"
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+
+	assertNotNil(t, result.Wind, "wind")
+	assertEqual(t, result.Wind.Speed, 100, "wind.speed")
+	assertIntPtr(t, result.Wind.Gust, 120, "wind.gust")
+}
+
+func TestMetarParserThreeDigitWindShearSpeed(t *testing.T) {
+	input := "KJFK 121751Z WS020/240100KT 10SM FEW015 10/08 Q1013"
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+
+	assertNotNil(t, result.WindShear, "windShear")
+	assertEqual(t, result.WindShear.Height, 2000, "windShear.height")
+	assertEqual(t, result.WindShear.Speed, 100, "windShear.speed")
+	assertEqual(t, result.WindShear.Unit, SpeedUnitKnot, "windShear.unit")
+}
+
+func TestMetarParserWindRejectsTrailingData(t *testing.T) {
+	input := "KJFK 121751Z 18003KTEXTRA 10SM FEW015 10/08 Q1013"
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+
+	assertNil(t, result.Wind, "wind")
+}
+
 func TestMetarParserNoneDeposit(t *testing.T) {
 	input := "UUWW 151030Z 34002MPS CAVOK 14/02 Q1026 R01/000070 NOSIG"
 	result, err := ParseMetar(input, nil)
