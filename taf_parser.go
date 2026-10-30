@@ -56,10 +56,9 @@ func (p *tafParser) Parse(input string) (*TAF, error) {
 
 	p.parseTAFFirstLine(taf, firstLine, idx)
 
-	minMaxLines := [][]string{firstLine[idx+1:]}
-	if len(lines) > 1 {
-		minMaxLines = append(minMaxLines, lines[len(lines)-1])
-	}
+	minMaxLines := make([][]string, 0, len(lines))
+	minMaxLines = append(minMaxLines, firstLine[idx+1:])
+	minMaxLines = append(minMaxLines, lines[1:]...)
 	p.parseMaxMinTemperatures(taf, minMaxLines)
 
 	for li := 1; li < len(lines); li++ {

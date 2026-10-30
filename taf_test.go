@@ -584,6 +584,33 @@ func TestTAFParserInvalidLineBreaks(t *testing.T) {
 	}
 }
 
+func TestTAFParserMaxMinTemperatureOutsideFirstLastSegment(t *testing.T) {
+	const code = "TAF KAAA 121940Z 1220/1308 18005KT 9999 FEW020 " +
+		"TEMPO 1221/1223 2SM -SN TX30/1223Z " +
+		"FM130000 20010KT 9999 SCT020 TN05/1305Z " +
+		"FM130600 18005KT 9999 FEW020"
+
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNotNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 30.0, "maxTemp.temperature")
+		assertEqual(t, result.MaxTemperature.Day, 12, "maxTemp.day")
+		assertEqual(t, result.MaxTemperature.Hour, 23, "maxTemp.hour")
+	}
+
+	if result.MinTemperature != nil {
+		assertEqual(t, result.MinTemperature.Temperature, 5.0, "minTemp.temperature")
+		assertEqual(t, result.MinTemperature.Day, 13, "minTemp.day")
+		assertEqual(t, result.MinTemperature.Hour, 5, "minTemp.hour")
+	}
+}
+
 func TestTAFParserNoLineBreaksEndTemp(t *testing.T) {
 	code := "TAF KLSV 120700Z 1207/1313 VRB06KT 9999 SCT250 QNH2992INS BECMG 1217/1218 10010G15KT 9999 SCT250 QNH2980INS BECMG 1303/1304 VRB06KT 9999 FEW250 QNH2979INS TX42/1223Z TN24/1213Z"
 	result, err := ParseTAF(code, nil)
