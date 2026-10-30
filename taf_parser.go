@@ -145,6 +145,7 @@ func (p *tafParser) parseTAFFirstLine(taf *TAF, firstLine []string, startIdx int
 		switch {
 		case tok == remarkStr:
 			parseRemarkIntoTAF(taf, firstLine, i, p.Locale)
+			return
 		case tafCmd != nil:
 			err := tafCmd.Execute(&taf.Container, tok)
 			if err != nil {

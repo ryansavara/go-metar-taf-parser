@@ -730,6 +730,7 @@ func TestTAFParserRemark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseTAF error: %v", err)
 	}
+	assertNil(t, result.Auto, "auto")
 	assertNotNil(t, result.Remark, "remark")
 	assertEqual(t, len(result.Remarks), 2, "remarks len")
 }
@@ -1196,6 +1197,39 @@ func TestTAFParserInvalidValidity(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid validity")
 	}
+}
+
+// ============================================================
+// Regression tests for TAF first-line RMK leak fix
+// ============================================================
+
+func TestTAFParserFirstLineRemarkDoesNotLeak(t *testing.T) {
+	const code = "TAF KAAA 121720Z 1218/1324 18005KT 9999 FEW020 RMK TSRA BKN020 AUTO"
+
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNil(t, result.Auto, "auto")
+	assertEqual(t, len(result.WeatherConditions), 0, "base weather conditions")
+	assertEqual(t, len(result.Clouds), 1, "base clouds")
+	assertEqual(t, result.Clouds[0].Quantity, CloudQuantityFEW, "base cloud quantity")
+	assertNotNil(t, result.Remark, "remark")
+}
+
+func TestTAFParserFirstLineRemarkAutoDoesNotSetFlag(t *testing.T) {
+	const code = "TAF CZBF 300939Z 3010/3022 VRB03KT 6SM -SN OVC015 RMK FCST BASED ON AUTO OBS. NXT FCST BY 301400Z"
+
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNil(t, result.Auto, "auto")
+	assertEqual(t, len(result.WeatherConditions), 1, "base weather conditions")
+	assertEqual(t, len(result.Clouds), 1, "base clouds")
+	assertNotNil(t, result.Remark, "remark")
 }
 
 // ============================================================
