@@ -35,22 +35,20 @@ func (p *metarParser) Parse(input string) (*Metar, error) {
 		idx++
 	}
 
-	var flags struct {
-		amendment, auto, canceled, corrected, nilVal bool
-	}
-	if idx+1 < len(tokens) && isStation(tokens[idx+1]) {
-		if f := findFlags(tokens[idx]); f != nil {
-			flags = *f
-			idx++
+	var flags flagState
+	stationIdx := findMetarStation(tokens, idx)
+	for _, tok := range tokens[idx:stationIdx] {
+		if f := findFlags(tok); f != nil {
+			flags = mergeFlags(flags, *f)
 		}
 	}
 
-	if idx >= len(tokens) {
+	if stationIdx >= len(tokens) {
 		return nil, NewParseError("Unexpected end of input after type/flags")
 	}
 
-	station := tokens[idx]
-	idx++
+	station := tokens[stationIdx]
+	idx = stationIdx + 1
 
 	if idx >= len(tokens) {
 		return nil, NewParseError("Unexpected end of input after station")
@@ -112,6 +110,40 @@ func (p *metarParser) Parse(input string) (*Metar, error) {
 	}
 
 	return metar, nil
+}
+
+// findMetarStation returns the index of the METAR station token, skipping any
+// leading header flags. A station candidate is a four-character token followed
+// by a delivery time; every token between idx and that candidate must itself be
+// a flag. This keeps a leading "AUTO" that is the station (because no station
+// precedes the timestamp) from being consumed as a flag, while still allowing
+// stacked flags such as "COR AUTO KJFK". When no candidate is found the parser
+// falls back to skipping leading flags.
+func findMetarStation(tokens []string, idx int) int {
+	for i := idx; i+1 < len(tokens); i++ {
+		if !isStation(tokens[i]) || parseDeliveryTime(tokens[i+1]) == nil {
+			continue
+		}
+		allFlags := true
+		for _, tok := range tokens[idx:i] {
+			if findFlags(tok) == nil {
+				allFlags = false
+				break
+			}
+		}
+		if allFlags {
+			return i
+		}
+	}
+
+	stationIdx := idx
+	for stationIdx < len(tokens) && findFlags(tokens[stationIdx]) != nil {
+		stationIdx++
+	}
+	if stationIdx >= len(tokens) {
+		return idx
+	}
+	return stationIdx
 }
 
 func mergePMVisibilityPrefixes(tokens []string) []string {

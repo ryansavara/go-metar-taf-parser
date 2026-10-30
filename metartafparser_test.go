@@ -307,6 +307,32 @@ func TestMetarParserAutoFlag(t *testing.T) {
 	assertIntPtr(t, result.Minute, 50, "minute")
 }
 
+func TestMetarParserStackedFlags(t *testing.T) {
+	cases := []string{
+		"METAR COR AUTO KJFK 121751Z 18003KT 10SM FEW015 10/08 Q1013",
+		"METAR AUTO COR KJFK 121751Z 18003KT 10SM FEW015 10/08 Q1013",
+		"COR AUTO KJFK 121751Z 18003KT 10SM FEW015 10/08 Q1013",
+		"AUTO COR KJFK 121751Z 18003KT 10SM FEW015 10/08 Q1013",
+		"COR AUTO COR KJFK 121751Z 18003KT 10SM FEW015 10/08 Q1013",
+	}
+
+	for _, input := range cases {
+		t.Run(input, func(t *testing.T) {
+			result, err := ParseMetar(input, nil)
+			if err != nil {
+				t.Fatalf("ParseMetar(%q) error: %v", input, err)
+			}
+
+			assertEqual(t, result.Station, "KJFK", "station")
+			assertIntPtr(t, result.Day, 12, "day")
+			assertIntPtr(t, result.Hour, 17, "hour")
+			assertIntPtr(t, result.Minute, 51, "minute")
+			assertBoolPtr(t, result.Auto, true, "auto")
+			assertBoolPtr(t, result.Corrected, true, "corrected")
+		})
+	}
+}
+
 func TestMetarParserTempo(t *testing.T) {
 	input := "LFBG 081130Z AUTO 23012KT 9999 SCT022 BKN072 BKN090 22/16 Q1011 TEMPO 26015G25KT 3000 TSRA SCT025CB BKN050"
 	result, err := ParseMetar(input, nil)
