@@ -26,13 +26,27 @@ func TestParseAuto_TAF(t *testing.T) {
 	}
 }
 
-func TestParseAuto_TAFPrefixFallbackToMetar(t *testing.T) {
-	result, err := parseAuto("TAF LFPG 170830Z 00000KT 0350 FG SCT000 M01/M01 Q1026")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestParseAuto_RejectsLowercaseInput(t *testing.T) {
+	cases := []string{
+		"taf KJFK 121720Z 1218/1324 27008KT P6SM FEW020",
+		"Taf KJFK 121720Z 1218/1324 27008KT P6SM FEW020",
+		"kjfk 121720Z 27008KT P6SM FEW020",
 	}
-	if _, ok := result.(*metartafparser.Metar); !ok {
-		t.Errorf("expected *Metar, got %T", result)
+
+	for _, input := range cases {
+		t.Run(input, func(t *testing.T) {
+			_, err := parseAuto(input)
+			if err == nil {
+				t.Fatal("expected error for lowercase input")
+			}
+		})
+	}
+}
+
+func TestParseAuto_InvalidTAFDoesNotFallbackToMetar(t *testing.T) {
+	_, err := parseAuto("TAF LFPG 170830Z 00000KT 0350 FG SCT000 M01/M01 Q1026")
+	if err == nil {
+		t.Fatal("expected error for invalid TAF")
 	}
 }
 

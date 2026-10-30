@@ -80,6 +80,16 @@ TEMPO 1604/1607 0400 BCFG BKN002 TX17/1512Z TN07/1605Z`
 	assertEqual(t, result.InitialRaw, "TAF TXFL 150500Z 1506/1612 17005KT 6000 SCT012", "initialRaw")
 }
 
+func TestTAFParserRejectsLowercaseTAF(t *testing.T) {
+	_, err := ParseTAF(
+		"taf KJFK 121720Z 1218/1324 27008KT P6SM FEW020",
+		nil,
+	)
+	if err == nil {
+		t.Fatal("expected error for lowercase TAF")
+	}
+}
+
 func TestTAFParserWithoutLineBreaks(t *testing.T) {
 	input := "TAF LSZH 292025Z 2921/3103 VRB03KT 9999 FEW020 BKN080 TX20/3014Z TN06/3003Z PROB30 TEMPO 2921/2923 SHRA BECMG 3001/3004 4000 MIFG NSC PROB40 3003/3007 1500 BCFG SCT004 PROB30 3004/3007 0800 FG VV003 BECMG 3006/3009 9999 FEW030 PROB40 TEMPO 3012/3017 30008KT"
 	result, err := ParseTAF(input, nil)

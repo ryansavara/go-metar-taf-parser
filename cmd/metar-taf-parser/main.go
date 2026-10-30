@@ -46,33 +46,22 @@ func main() {
 
 func parseAuto(input string) (any, error) {
 	trimmed := strings.TrimSpace(input)
+	if trimmed == "" || trimmed != strings.ToUpper(trimmed) {
+		return nil, errInvalidInput
+	}
 
-	tryTAF := strings.HasPrefix(trimmed, "TAF") || strings.HasPrefix(trimmed, "taf")
-
+	tryTAF := strings.HasPrefix(trimmed, "TAF")
 	if tryTAF {
 		taf, err := metartafparser.ParseTAF(input, nil)
-		if err == nil {
-			return taf, nil
+		if err != nil {
+			return nil, errInvalidInput
 		}
-		metar, err := metartafparser.ParseMetar(input, nil)
-		if err == nil && isMetarValid(metar) {
-			return metar, nil
-		}
-		return nil, errInvalidInput
+		return taf, nil
 	}
 
 	metar, err := metartafparser.ParseMetar(input, nil)
 	if err == nil && isMetarValid(metar) {
 		return metar, nil
-	}
-
-	taf, err := metartafparser.ParseTAF(input, nil)
-	if err == nil {
-		return taf, nil
-	}
-
-	if metar != nil {
-		return nil, errInvalidInput
 	}
 
 	return nil, errInvalidInput
