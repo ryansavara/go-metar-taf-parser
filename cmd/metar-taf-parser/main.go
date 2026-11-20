@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	metartafparser "github.com/ryansavara/go-metar-taf-parser"
@@ -44,24 +45,54 @@ func main() {
 	}
 }
 
+var tafValidityRe = regexp.MustCompile(`\b\d{4}/\d{4}\b`)
+
+func hasTAFValidityPeriod(input string) bool {
+	return tafValidityRe.MatchString(input)
+}
+
 func parseAuto(input string) (any, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" || trimmed != strings.ToUpper(trimmed) {
 		return nil, errInvalidInput
 	}
 
-	tryTAF := strings.HasPrefix(trimmed, "TAF")
-	if tryTAF {
+	tokens := strings.Fields(trimmed)
+	if len(tokens) == 0 {
+		return nil, errInvalidInput
+	}
+
+	firstToken := tokens[0]
+
+	if firstToken == "TAF" || firstToken == "TAF AMD" || firstToken == "TAF COR" {
 		taf, err := metartafparser.ParseTAF(input, nil)
-		if err != nil {
-			return nil, errInvalidInput
+		if err == nil {
+			return taf, nil
 		}
-		return taf, nil
+		return nil, errInvalidInput
+	}
+
+	if firstToken == "METAR" || firstToken == "SPECI" {
+		metar, err := metartafparser.ParseMetar(input, nil)
+		if err == nil && isMetarValid(metar) {
+			return metar, nil
+		}
+		return nil, errInvalidInput
 	}
 
 	metar, err := metartafparser.ParseMetar(input, nil)
 	if err == nil && isMetarValid(metar) {
+		if hasTAFValidityPeriod(trimmed) {
+			if taf, tafErr := metartafparser.ParseTAF(input, nil); tafErr == nil {
+				return taf, nil
+			}
+		}
 		return metar, nil
+	}
+
+	taf, err := metartafparser.ParseTAF(input, nil)
+	if err == nil {
+		return taf, nil
 	}
 
 	return nil, errInvalidInput

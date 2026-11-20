@@ -51,6 +51,79 @@ func TestParseAuto_InvalidTAFDoesNotFallbackToMetar(t *testing.T) {
 	}
 }
 
+func TestParseAuto_MetarStationStartingWithTAF(t *testing.T) {
+	result, err := parseAuto("TAFB 121720Z 18005KT 10SM FEW020 10/08 A2992")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	metar, ok := result.(*metartafparser.Metar)
+	if !ok {
+		t.Fatalf("expected *Metar, got %T", result)
+	}
+	if metar.Station != "TAFB" {
+		t.Errorf("expected station TAFB, got %s", metar.Station)
+	}
+}
+
+func TestParseAuto_PrefixlessTAF(t *testing.T) {
+	result, err := parseAuto("KAAA 121720Z 1218/1324 18005KT P6SM FEW020")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	taf, ok := result.(*metartafparser.TAF)
+	if !ok {
+		t.Fatalf("expected *TAF, got %T", result)
+	}
+	if taf.Station != "KAAA" {
+		t.Errorf("expected station KAAA, got %s", taf.Station)
+	}
+}
+
+func TestParseAuto_TAFWithAMD(t *testing.T) {
+	result, err := parseAuto("TAF AMD KJFK 121720Z 1218/1324 27008KT P6SM FEW020")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	taf, ok := result.(*metartafparser.TAF)
+	if !ok {
+		t.Fatalf("expected *TAF, got %T", result)
+	}
+	if taf.Station != "KJFK" {
+		t.Errorf("expected station KJFK, got %s", taf.Station)
+	}
+}
+
+func TestParseAuto_TAFWithCOR(t *testing.T) {
+	result, err := parseAuto("TAF COR KJFK 121720Z 1218/1324 27008KT P6SM FEW020")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	taf, ok := result.(*metartafparser.TAF)
+	if !ok {
+		t.Fatalf("expected *TAF, got %T", result)
+	}
+	if taf.Station != "KJFK" {
+		t.Errorf("expected station KJFK, got %s", taf.Station)
+	}
+}
+
+func TestParseAuto_SPECI(t *testing.T) {
+	result, err := parseAuto("SPECI KJFK 121720Z 27008KT P6SM FEW020")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	metar, ok := result.(*metartafparser.Metar)
+	if !ok {
+		t.Fatalf("expected *Metar, got %T", result)
+	}
+	if metar.Station != "KJFK" {
+		t.Errorf("expected station KJFK, got %s", metar.Station)
+	}
+	if metar.Type == nil || *metar.Type != metartafparser.MetarTypeSPECI {
+		t.Errorf("expected type SPECI, got %v", metar.Type)
+	}
+}
+
 func TestParseAuto_Invalid(t *testing.T) {
 	_, err := parseAuto("BLAH BLAH BLAH")
 	if err == nil {
