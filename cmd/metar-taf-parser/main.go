@@ -64,7 +64,7 @@ func parseAuto(input string) (any, error) {
 
 	firstToken := tokens[0]
 
-	if firstToken == "TAF" || firstToken == "TAF AMD" || firstToken == "TAF COR" {
+	if firstToken == "TAF" {
 		taf, err := metartafparser.ParseTAF(input, nil)
 		if err == nil {
 			return taf, nil
