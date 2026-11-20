@@ -30,8 +30,14 @@ func (c *tornadicActivityBegEndRemarkCommand) Execute(code string, remarks []Rem
 	}
 	tornType := strings.ReplaceAll(m[1], " ", "")
 	tornLoc := locStr(c.locale, "Remark."+tornType)
-	dirLoc := locStr(c.locale, "Converter."+m[8])
-	desc := remarkDesc(c.locale, "Remark.Tornadic.Activity.BegEnd", tornLoc, m[3], m[4], m[6], m[7], m[9], dirLoc)
+
+	var desc *string
+	if m[10] != "" {
+		dirLoc := locStr(c.locale, "Converter."+m[10])
+		desc = remarkDesc(c.locale, "Remark.Tornadic.Activity.BegEnd", tornLoc, m[3], m[4], m[6], m[7], m[9], dirLoc)
+	} else {
+		desc = remarkDesc(c.locale, "Remark.Tornadic.Activity.BegEndNoDir", tornLoc, m[3], m[4], m[6], m[7], m[9])
+	}
 	rm := Remark{
 		Type:        RemarkTypeTornadicActivityBegEnd,
 		Description: desc,

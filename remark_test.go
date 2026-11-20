@@ -282,6 +282,103 @@ func TestRemarkParserWaterspoutEndHour(t *testing.T) {
 	}
 }
 
+func TestRemarkParserTornadicBegEndDescription(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 TORNADO B1518E1530 5 NE", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeTornadicActivityBegEnd {
+			found = true
+			assertNotNil(t, r.Description, "description")
+			if r.Description != nil {
+				assertContains(t, *r.Description, "North East", "description contains direction")
+				assertNotContains(t, *r.Description, "  of the station", "no double space before 'of the station'")
+			}
+			assertNotNil(t, r.Direction, "Direction field")
+			if r.Direction != nil {
+				assertEqual(t, *r.Direction, "NE", "Direction value")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected TornadicActivityBegEnd remark")
+	}
+}
+
+func TestRemarkParserFunnelCloudBegEndDescription(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 FUNNEL CLOUD B1518E1530 5 NE", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeTornadicActivityBegEnd {
+			found = true
+			assertNotNil(t, r.Description, "description")
+			if r.Description != nil {
+				assertContains(t, *r.Description, "North East", "description contains direction")
+				assertNotContains(t, *r.Description, "  of the station", "no double space before 'of the station'")
+			}
+			assertNotNil(t, r.Direction, "Direction field")
+			if r.Direction != nil {
+				assertEqual(t, *r.Direction, "NE", "Direction value")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected TornadicActivityBegEnd remark")
+	}
+}
+
+func TestRemarkParserWaterspoutBegEndDescription(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 WATERSPOUT B1518E1530 5 NE", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeTornadicActivityBegEnd {
+			found = true
+			assertNotNil(t, r.Description, "description")
+			if r.Description != nil {
+				assertContains(t, *r.Description, "North East", "description contains direction")
+				assertNotContains(t, *r.Description, "  of the station", "no double space before 'of the station'")
+			}
+			assertNotNil(t, r.Direction, "Direction field")
+			if r.Direction != nil {
+				assertEqual(t, *r.Direction, "NE", "Direction value")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected TornadicActivityBegEnd remark")
+	}
+}
+
+func TestRemarkParserTornadicBegEndWithoutDirection(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 TORNADO B1518E1530 5", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeTornadicActivityBegEnd {
+			found = true
+			assertNotNil(t, r.Description, "description")
+			if r.Description != nil {
+				assertNotContains(t, *r.Description, "North East", "description has no direction")
+				assertNotContains(t, *r.Description, "  of the station", "no double space before 'of the station'")
+			}
+			assertNil(t, r.Direction, "Direction field should be nil")
+		}
+	}
+	if !found {
+		t.Fatal("expected TornadicActivityBegEnd remark")
+	}
+}
+
 func TestRemarkParserPrecipBegEnd(t *testing.T) {
 	parser := newRemarkParser(DefaultLocale())
 	remarks := parser.Parse("AO1 RAB05E30SNB1520E1655")

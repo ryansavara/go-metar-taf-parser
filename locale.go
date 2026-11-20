@@ -280,9 +280,10 @@ func buildRemarkLocale() map[string]any {
 		},
 		"Tornadic": Locale{
 			"Activity": Locale{
-				"BegEnd":    "{0} beginning at {1}:{2} ending at {3}:{4} {5} SM {6} of the station",
-				"Beginning": "{0} beginning at {1}:{2} {3} SM {4} of the station",
-				"Ending":    "{0} ending at {1}:{2} {3} SM {4} of the station",
+				"BegEnd":      "{0} beginning at {1}:{2} ending at {3}:{4} {5} SM {6} of the station",
+				"BegEndNoDir": "{0} beginning at {1}:{2} ending at {3}:{4} {5} SM of the station",
+				"Beginning":   "{0} beginning at {1}:{2} {3} SM {4} of the station",
+				"Ending":      "{0} ending at {1}:{2} {3} SM {4} of the station",
 			},
 		},
 		"Tower": Locale{

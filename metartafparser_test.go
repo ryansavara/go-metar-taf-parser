@@ -52,6 +52,18 @@ func assertBoolPtr(t *testing.T, got *bool, want bool, msg string) {
 		t.Errorf("%s: got %v, want %v", msg, *got, want)
 	}
 }
+func assertContains(t *testing.T, s, substr, msg string) {
+	t.Helper()
+	if !strings.Contains(s, substr) {
+		t.Errorf("%s: %q does not contain %q", msg, s, substr)
+	}
+}
+func assertNotContains(t *testing.T, s, substr, msg string) {
+	t.Helper()
+	if strings.Contains(s, substr) {
+		t.Errorf("%s: %q contains %q", msg, s, substr)
+	}
+}
 
 // ============================================================
 // parseWeatherCondition tests
