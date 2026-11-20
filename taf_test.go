@@ -802,6 +802,60 @@ func TestTAFParserMilitaryTemperatureMalformed(t *testing.T) {
 	}
 }
 
+func TestTAFParserMilitaryTempHigherThanTX(t *testing.T) {
+	code := "TAF KNBC 1215/1315 27010KT 9999 SCT010 BKN080 TX30/1219Z T35/1309Z"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNotNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 35.0, "maxTemp.temperature")
+	}
+	if result.MinTemperature != nil {
+		assertEqual(t, result.MinTemperature.Temperature, 30.0, "minTemp.temperature")
+	}
+}
+
+func TestTAFParserMilitaryTempLowerThanTN(t *testing.T) {
+	code := "TAF KNBC 1215/1315 27010KT 9999 SCT010 BKN080 TN20/1219Z T15/1309Z"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNotNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 20.0, "maxTemp.temperature")
+	}
+	if result.MinTemperature != nil {
+		assertEqual(t, result.MinTemperature.Temperature, 15.0, "minTemp.temperature")
+	}
+}
+
+func TestTAFParserMilitaryTempBetweenTXAndTN(t *testing.T) {
+	code := "TAF KNBC 1215/1315 27010KT 9999 SCT010 BKN080 TX30/1219Z TN20/1309Z T25/1312Z"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNotNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 30.0, "maxTemp.temperature")
+	}
+	if result.MinTemperature != nil {
+		assertEqual(t, result.MinTemperature.Temperature, 20.0, "minTemp.temperature")
+	}
+}
+
 func TestTAFParserDoubleTAF(t *testing.T) {
 	code := "TAF TAF LFPG 191100Z 1912/2018 02010KT 9999 FEW040 PROB30 1217/1218"
 	result, err := ParseTAF(code, nil)

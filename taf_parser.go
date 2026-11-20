@@ -272,13 +272,29 @@ func assignMaxMinTemperatures(taf *TAF, groups []tempGroup) {
 
 	switch len(militaryGroups) {
 	case 1:
-		if maxTemp == nil {
-			maxTemp = &militaryGroups[0]
-		} else if minTemp == nil {
-			if militaryGroups[0].Temperature < maxTemp.Temperature {
-				minTemp = &militaryGroups[0]
+		m := &militaryGroups[0]
+		if maxTemp == nil && minTemp == nil {
+			maxTemp = m
+		} else if maxTemp == nil {
+			if m.Temperature < minTemp.Temperature {
+				maxTemp = minTemp
+				minTemp = m
 			} else {
-				minTemp = &militaryGroups[0]
+				maxTemp = m
+			}
+		} else if minTemp == nil {
+			if m.Temperature > maxTemp.Temperature {
+				minTemp = maxTemp
+				maxTemp = m
+			} else {
+				minTemp = m
+			}
+		} else {
+			if m.Temperature > maxTemp.Temperature {
+				maxTemp = m
+			}
+			if m.Temperature < minTemp.Temperature {
+				minTemp = m
 			}
 		}
 	case 2:
