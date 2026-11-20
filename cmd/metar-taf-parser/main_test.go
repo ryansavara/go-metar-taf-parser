@@ -101,6 +101,57 @@ func TestIsMetarValid_empty(t *testing.T) {
 	}
 }
 
+func TestParseAuto_NilMetar(t *testing.T) {
+	result, err := parseAuto("METAR KJFK 121751Z NIL")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	metar, ok := result.(*metartafparser.Metar)
+	if !ok {
+		t.Fatalf("expected *Metar, got %T", result)
+	}
+	if metar.Nil == nil || !*metar.Nil {
+		t.Error("expected Metar.Nil to be true")
+	}
+}
+
+func TestParseAuto_NilMetarWithoutPrefix(t *testing.T) {
+	result, err := parseAuto("SVMC 211703Z AUTO NIL")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	metar, ok := result.(*metartafparser.Metar)
+	if !ok {
+		t.Fatalf("expected *Metar, got %T", result)
+	}
+	if metar.Nil == nil || !*metar.Nil {
+		t.Error("expected Metar.Nil to be true")
+	}
+}
+
+func TestParseAuto_StationAndTimeOnlyStillInvalid(t *testing.T) {
+	_, err := parseAuto("KJFK 121751Z")
+	if err == nil {
+		t.Fatal("expected error for station and time only")
+	}
+}
+
+func TestIsMetarValid_nilFlag(t *testing.T) {
+	if !isMetarValid(&metartafparser.Metar{Nil: boolPtr(true)}) {
+		t.Error("expected true for Metar with Nil=true")
+	}
+}
+
+func TestIsMetarValid_canceledFlag(t *testing.T) {
+	if !isMetarValid(&metartafparser.Metar{Canceled: boolPtr(true)}) {
+		t.Error("expected true for Metar with Canceled=true")
+	}
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 // FuzzParseAuto verifies that CLI auto-detection rejects reports containing
 // lowercase characters.
 func FuzzParseAuto(f *testing.F) {

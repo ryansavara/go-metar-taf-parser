@@ -71,6 +71,12 @@ func isMetarValid(m *metartafparser.Metar) bool {
 	if m == nil {
 		return false
 	}
+	if m.Nil != nil && *m.Nil {
+		return true
+	}
+	if m.Canceled != nil && *m.Canceled {
+		return true
+	}
 	if m.Wind != nil {
 		return true
 	}
