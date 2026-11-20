@@ -50,6 +50,49 @@ func TestRemarkParserAO2(t *testing.T) {
 	assertEqual(t, remarks[1].Type, RemarkTypeAO2, "type")
 }
 
+func TestRemarkParserSingleTokenDescriptionAO2(t *testing.T) {
+	parser := newRemarkParser(DefaultLocale())
+	remarks := parser.Parse("AO2")
+	if len(remarks) < 1 {
+		t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+	}
+	assertEqual(t, remarks[0].Type, RemarkTypeAO2, "type")
+	assertNotNil(t, remarks[0].Description, "description")
+	assertEqual(t, *remarks[0].Description, "automated station with a precipitation discriminator", "description content")
+}
+
+func TestRemarkParserSingleTokenDescriptionVIRGA(t *testing.T) {
+	parser := newRemarkParser(DefaultLocale())
+	remarks := parser.Parse("VIRGA")
+	if len(remarks) < 1 {
+		t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+	}
+	assertEqual(t, remarks[0].Type, RemarkTypeVIRGA, "type")
+	assertNotNil(t, remarks[0].Description, "description")
+	assertEqual(t, *remarks[0].Description, "virga", "description content")
+}
+
+func TestRemarkParserSingleTokenDescriptionPRESFR(t *testing.T) {
+	parser := newRemarkParser(DefaultLocale())
+	remarks := parser.Parse("PRESFR")
+	if len(remarks) < 1 {
+		t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+	}
+	assertEqual(t, remarks[0].Type, RemarkTypePRESFR, "type")
+	assertNotNil(t, remarks[0].Description, "description")
+	assertEqual(t, *remarks[0].Description, "pressure falling rapidly", "description content")
+}
+
+func TestRemarkParserSingleUnknownToken(t *testing.T) {
+	parser := newRemarkParser(DefaultLocale())
+	remarks := parser.Parse("ZZZZ")
+	if len(remarks) < 1 {
+		t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+	}
+	assertEqual(t, remarks[0].Type, RemarkTypeUnknown, "type")
+	assertNil(t, remarks[0].Description, "description should be nil for unknown token")
+}
+
 func TestRemarkParserPeakWind(t *testing.T) {
 	parser := newRemarkParser(DefaultLocale())
 	remarks := parser.Parse("AO1 PK WND 28045/15")

@@ -54,7 +54,7 @@ func (c *defaultRemarkCommand) Execute(code string, remarks []Remark) (string, [
 	parts := splitFields(code, 1)
 	token := parts[0]
 	var rem *string
-	if len(parts) > 1 {
+	if isKnownRemarkType(token) {
 		rem = localeGet("Remark."+token, c.locale)
 	}
 
