@@ -124,7 +124,14 @@ func (c *windShiftRemarkCommand) Execute(code string, remarks []Remark) (string,
 // VirgaDirectionCommand: VIRGA <dir>
 // ============================================================
 
-var virgaDirRe = regexp.MustCompile(`^VIRGA ([A-Z]{2})`)
+var virgaDirRe = regexp.MustCompile(`^VIRGA ([A-Z]{2,3})\b`)
+
+var validVirgaDirections = map[string]bool{
+	"N": true, "NE": true, "NNE": true, "NNW": true, "NW": true,
+	"S": true, "SE": true, "SSE": true, "SSW": true, "SW": true,
+	"E": true, "ENE": true, "ESE": true,
+	"W": true, "WNW": true, "WSW": true,
+}
 
 type virgaDirectionRemarkCommand struct {
 	locale Locale
@@ -134,11 +141,20 @@ func newVirgaDirectionRemarkCommand(locale Locale) *virgaDirectionRemarkCommand 
 	return &virgaDirectionRemarkCommand{locale: locale}
 }
 
-func (c *virgaDirectionRemarkCommand) CanParse(code string) bool { return virgaDirRe.MatchString(code) }
+func (c *virgaDirectionRemarkCommand) CanParse(code string) bool {
+	m := virgaDirRe.FindStringSubmatch(code)
+	if m == nil {
+		return false
+	}
+	return validVirgaDirections[m[1]]
+}
 
 func (c *virgaDirectionRemarkCommand) Execute(code string, remarks []Remark) (string, []Remark, error) {
 	m := virgaDirRe.FindStringSubmatch(code)
 	if m == nil {
+		return code, remarks, errMatchNotFound
+	}
+	if !validVirgaDirections[m[1]] {
 		return code, remarks, errMatchNotFound
 	}
 	dirLoc := locStr(c.locale, "Converter."+m[1])

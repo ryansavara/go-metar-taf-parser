@@ -633,6 +633,82 @@ func TestRemarkParserVirga(t *testing.T) {
 	assertEqual(t, remarks[1].Type, RemarkTypeVIRGA, "type")
 }
 
+func TestRemarkParserVirgaDirectionFullReport(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 VIRGA SW", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	found := false
+	for _, rm := range metar.Remarks {
+		if rm.Type == RemarkTypeVirgaDirection {
+			found = true
+			if rm.Direction != nil {
+				assertEqual(t, *rm.Direction, "SW", "direction")
+			}
+			assertEqual(t, rm.Type, RemarkTypeVirgaDirection, "type")
+		}
+	}
+	if !found {
+		t.Fatalf("expected VirgaDirection remark not found")
+	}
+}
+
+func TestRemarkParserVirgaDoesNotConsumeAO1(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 VIRGA AO1", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	hasVirgaDirectionAO := false
+	hasAO1 := false
+	for _, rm := range metar.Remarks {
+		if rm.Type == RemarkTypeVirgaDirection && rm.Direction != nil && *rm.Direction == "AO" {
+			hasVirgaDirectionAO = true
+		}
+		if rm.Type == RemarkTypeAO1 {
+			hasAO1 = true
+		}
+	}
+	if hasVirgaDirectionAO {
+		t.Fatalf("unexpected VirgaDirection with Direction == AO")
+	}
+	if !hasAO1 {
+		t.Fatalf("expected AO1 remark not found")
+	}
+}
+
+func TestRemarkParserVirgaDoesNotConsumeDSNT(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 VIRGA DSNT SW", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	hasVirgaDirectionDS := false
+	for _, rm := range metar.Remarks {
+		if rm.Type == RemarkTypeVirgaDirection && rm.Direction != nil && *rm.Direction == "DS" {
+			hasVirgaDirectionDS = true
+		}
+	}
+	if hasVirgaDirectionDS {
+		t.Fatalf("unexpected VirgaDirection with Direction == DS")
+	}
+}
+
+func TestRemarkParserVirgaFullReport(t *testing.T) {
+	metar, err := ParseMetar("KLAX 140853Z 00000KT 10SM FEW010 14/12 A2992 RMK AO2 VIRGA", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	found := false
+	for _, rm := range metar.Remarks {
+		if rm.Type == RemarkTypeVIRGA {
+			found = true
+			assertEqual(t, rm.Type, RemarkTypeVIRGA, "type")
+		}
+	}
+	if !found {
+		t.Fatalf("expected VIRGA remark not found")
+	}
+}
+
 func TestRemarkParserCeilingHeight(t *testing.T) {
 	parser := newRemarkParser(DefaultLocale())
 	remarks := parser.Parse("AO1 CIG 005V010")
