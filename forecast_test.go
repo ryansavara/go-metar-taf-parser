@@ -437,6 +437,17 @@ func TestParseTAFAsForecastWithoutDeliveryTime(t *testing.T) {
 	assertEqual(t, fc.Issued, time.Date(2022, 8, 12, 14, 57, 0, 0, time.UTC).UnixMilli(), "issued")
 	assertEqual(t, fc.Station, "KNBC", "station")
 	assertEqual(t, len(fc.Forecast), 4, "forecast length")
+
+	if fc.MaxTemperature != nil {
+		assertEqual(t, fc.MaxTemperature.Temperature, 30.0, "maxTemp.temperature")
+		expectedMaxDate := time.Date(2022, 8, 12, 19, 0, 0, 0, time.UTC).UnixMilli()
+		assertEqual(t, fc.MaxTemperature.Date, expectedMaxDate, "maxTemp.date")
+	}
+	if fc.MinTemperature != nil {
+		assertEqual(t, fc.MinTemperature.Temperature, 22.0, "minTemp.temperature")
+		expectedMinDate := time.Date(2022, 8, 13, 9, 0, 0, 0, time.UTC).UnixMilli()
+		assertEqual(t, fc.MinTemperature.Date, expectedMinDate, "minTemp.date")
+	}
 }
 
 func TestParseTAFStationFM(t *testing.T) {

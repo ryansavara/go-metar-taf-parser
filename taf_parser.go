@@ -165,24 +165,144 @@ func (p *tafParser) parseTAFFirstLine(taf *TAF, firstLine []string, startIdx int
 	}
 }
 
+type tempGroup struct {
+	temp       Temperature
+	isMax      bool
+	isMin      bool
+	isMilitary bool
+}
+
 func (p *tafParser) parseMaxMinTemperatures(taf *TAF, lines [][]string) {
+	var groups []tempGroup
+
 	for _, line := range lines {
 		for _, tok := range line {
 			if tok == remarkStr {
 				break
 			}
-			if strings.HasPrefix(tok, "TX") {
-				t, err := parseTemperature(tok)
-				if err == nil {
-					taf.MaxTemperature = &t
+			switch {
+			case strings.HasPrefix(tok, "TX"):
+				if t, err := parseTemperature(tok); err == nil {
+					groups = append(groups, tempGroup{temp: t, isMax: true})
 				}
-			} else if strings.HasPrefix(tok, "TN") {
-				t, err := parseTemperature(tok)
-				if err == nil {
-					taf.MinTemperature = &t
+			case strings.HasPrefix(tok, "TN"):
+				if t, err := parseTemperature(tok); err == nil {
+					groups = append(groups, tempGroup{temp: t, isMin: true})
+				}
+			case isMilitaryTempGroup(tok):
+				if t, err := parseMilitaryTemperature(tok); err == nil {
+					groups = append(groups, tempGroup{temp: t, isMilitary: true})
 				}
 			}
 		}
+	}
+
+	assignMaxMinTemperatures(taf, groups)
+}
+
+func isMilitaryTempGroup(tok string) bool {
+	if len(tok) < 5 || tok[0] != 'T' {
+		return false
+	}
+	if strings.HasPrefix(tok, "TX") || strings.HasPrefix(tok, "TN") || strings.HasPrefix(tok, "TEMPO") || strings.HasPrefix(tok, "TAF") {
+		return false
+	}
+	parts := splitN(tok, "/")
+	if len(parts) != 2 {
+		return false
+	}
+	if len(parts[1]) < 4 || parts[1][len(parts[1])-1] != 'Z' {
+		return false
+	}
+	tempPart := parts[0][1:]
+	if len(tempPart) == 0 {
+		return false
+	}
+	if tempPart[0] == 'M' {
+		tempPart = tempPart[1:]
+	}
+	for _, c := range tempPart {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func parseMilitaryTemperature(input string) (Temperature, error) {
+	parts := splitN(input, "/")
+	if len(parts) < 2 {
+		return Temperature{}, NewParseError("Invalid military temperature format: " + input)
+	}
+	if len(parts[1]) < 4 || parts[1][len(parts[1])-1] != 'Z' {
+		return Temperature{}, NewParseError("Invalid day/hour in military temperature: " + input)
+	}
+	t, err := convertTemperature(parts[0][1:])
+	if err != nil {
+		return Temperature{}, err
+	}
+	day := atoi(parts[1][0:2])
+	hour := atoi(parts[1][2:4])
+	return Temperature{
+		Temperature: t,
+		Day:         day,
+		Hour:        hour,
+	}, nil
+}
+
+func assignMaxMinTemperatures(taf *TAF, groups []tempGroup) {
+	var maxTemp *Temperature
+	var minTemp *Temperature
+
+	for _, g := range groups {
+		if g.isMax {
+			maxTemp = &g.temp
+		}
+		if g.isMin {
+			minTemp = &g.temp
+		}
+	}
+
+	militaryGroups := make([]Temperature, 0)
+	for _, g := range groups {
+		if g.isMilitary {
+			militaryGroups = append(militaryGroups, g.temp)
+		}
+	}
+
+	switch len(militaryGroups) {
+	case 1:
+		if maxTemp == nil {
+			maxTemp = &militaryGroups[0]
+		} else if minTemp == nil {
+			if militaryGroups[0].Temperature < maxTemp.Temperature {
+				minTemp = &militaryGroups[0]
+			} else {
+				minTemp = &militaryGroups[0]
+			}
+		}
+	case 2:
+		var higher, lower Temperature
+		if militaryGroups[0].Temperature > militaryGroups[1].Temperature {
+			higher = militaryGroups[0]
+			lower = militaryGroups[1]
+		} else {
+			higher = militaryGroups[1]
+			lower = militaryGroups[0]
+		}
+		if maxTemp == nil {
+			maxTemp = &higher
+		}
+		if minTemp == nil {
+			minTemp = &lower
+		}
+	}
+
+	if maxTemp != nil {
+		taf.MaxTemperature = maxTemp
+	}
+	if minTemp != nil {
+		taf.MinTemperature = minTemp
 	}
 }
 

@@ -745,6 +745,63 @@ func TestTAFParserNoLineBreaksEndTemp(t *testing.T) {
 	}
 }
 
+func TestTAFParserMilitaryTemperatureGroups(t *testing.T) {
+	code := "TAF KNBC 1215/1315 27010KT 9999 SCT010 BKN080 T30/1219Z T22/1309Z"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNotNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 30.0, "maxTemp.temperature")
+		assertEqual(t, result.MaxTemperature.Day, 12, "maxTemp.day")
+		assertEqual(t, result.MaxTemperature.Hour, 19, "maxTemp.hour")
+	}
+
+	if result.MinTemperature != nil {
+		assertEqual(t, result.MinTemperature.Temperature, 22.0, "minTemp.temperature")
+		assertEqual(t, result.MinTemperature.Day, 13, "minTemp.day")
+		assertEqual(t, result.MinTemperature.Hour, 9, "minTemp.hour")
+	}
+}
+
+func TestTAFParserMilitaryTemperatureSingleGroup(t *testing.T) {
+	code := "TAF KNBC 1215/1315 27010KT 9999 SCT010 BKN080 T30/1219Z"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 30.0, "maxTemp.temperature")
+		assertEqual(t, result.MaxTemperature.Day, 12, "maxTemp.day")
+		assertEqual(t, result.MaxTemperature.Hour, 19, "maxTemp.hour")
+	}
+}
+
+func TestTAFParserMilitaryTemperatureMalformed(t *testing.T) {
+	code := "TAF KNBC 1215/1315 27010KT 9999 SCT010 BKN080 T30/1219Z TXX/1309Z"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+
+	assertNotNil(t, result.MaxTemperature, "maxTemperature")
+	assertNil(t, result.MinTemperature, "minTemperature")
+
+	if result.MaxTemperature != nil {
+		assertEqual(t, result.MaxTemperature.Temperature, 30.0, "maxTemp.temperature")
+		assertEqual(t, result.MaxTemperature.Day, 12, "maxTemp.day")
+		assertEqual(t, result.MaxTemperature.Hour, 19, "maxTemp.hour")
+	}
+}
+
 func TestTAFParserDoubleTAF(t *testing.T) {
 	code := "TAF TAF LFPG 191100Z 1912/2018 02010KT 9999 FEW040 PROB30 1217/1218"
 	result, err := ParseTAF(code, nil)
