@@ -792,13 +792,88 @@ func TestRemarkParserWaterEquivalentSnow(t *testing.T) {
 }
 
 func TestRemarkParserIceAccretion(t *testing.T) {
-	parser := newRemarkParser(DefaultLocale())
-	remarks := parser.Parse("l1004 AO1")
-	if len(remarks) < 1 {
-		t.Fatalf("expected at least 1 remark, got %d", len(remarks))
+	metar, err := ParseMetar("CYWG 121800Z 36010KT 2SM -FZRA OVC005 M02/M03 A2992 RMK I1004 AO2", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
 	}
-	assertEqual(t, remarks[0].Type, RemarkTypeIceAccretion, "type")
-	assertFloatPtr(t, remarks[0].Amount, 0.04, "amount")
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeIceAccretion {
+			found = true
+			assertEqual(t, r.Type, RemarkTypeIceAccretion, "type")
+			assertFloatPtr(t, r.Amount, 0.04, "amount")
+			assertNotNil(t, r.Description, "description")
+		}
+	}
+	if !found {
+		t.Fatal("expected IceAccretion remark")
+	}
+}
+
+func TestRemarkParserIceAccretionSixHour(t *testing.T) {
+	metar, err := ParseMetar("CYWG 121800Z 36010KT 2SM -FZRA OVC005 M02/M03 A2992 RMK I6023 AO2", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeIceAccretion {
+			found = true
+			assertEqual(t, r.Type, RemarkTypeIceAccretion, "type")
+			assertFloatPtr(t, r.Amount, 0.23, "amount")
+		}
+	}
+	if !found {
+		t.Fatal("expected IceAccretion remark")
+	}
+}
+
+func TestRemarkParserIceAccretionInvalidPeriod(t *testing.T) {
+	metar, err := ParseMetar("CYWG 121800Z 36010KT 2SM -FZRA OVC005 M02/M03 A2992 RMK I2004 AO2", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeIceAccretion {
+			t.Fatalf("unexpected IceAccretion remark for invalid period I2004: amount=%v", r.Amount)
+		}
+	}
+}
+
+func TestRemarkParserIceAccretionInvalidPeriodSeven(t *testing.T) {
+	metar, err := ParseMetar("CYWG 121800Z 36010KT 2SM -FZRA OVC005 M02/M03 A2992 RMK I7004 AO2", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeIceAccretion {
+			t.Fatalf("unexpected IceAccretion remark for invalid period I7004: amount=%v", r.Amount)
+		}
+	}
+}
+
+func TestRemarkParserIceAccretionLowercase(t *testing.T) {
+	metar, err := ParseMetar("CYWG 121800Z 36010KT 2SM -FZRA OVC005 M02/M03 A2992 RMK l1004 AO2", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeIceAccretion {
+			t.Fatalf("unexpected IceAccretion remark for lowercase l1004: amount=%v", r.Amount)
+		}
+	}
+}
+
+func TestRemarkParserIceAccretionTokenBoundary(t *testing.T) {
+	metar, err := ParseMetar("CYWG 121800Z 36010KT 2SM -FZRA OVC005 M02/M03 A2992 RMK I1004X AO2", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeIceAccretion {
+			t.Fatalf("unexpected IceAccretion remark for I1004X: amount=%v", r.Amount)
+		}
+	}
 }
 
 func TestRemarkParserHourlyTemperature(t *testing.T) {

@@ -282,10 +282,10 @@ func (c *precipitationAmount24HourRemarkCommand) Execute(code string, remarks []
 }
 
 // ============================================================
-// IceAccretionCommand: lhammm
+// IceAccretionCommand: Ihammm (period 1/3/6, amount in hundredths inch)
 // ============================================================
 
-var iceAccretionRe = regexp.MustCompile(`^l(\d)(\d{3})`)
+var iceAccretionRe = regexp.MustCompile(`^I([136])(\d{3})(?:\s|$)`)
 
 type iceAccretionRemarkCommand struct {
 	locale Locale
