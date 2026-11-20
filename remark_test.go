@@ -396,6 +396,73 @@ func TestRemarkParserSmallHailSize(t *testing.T) {
 	assertFloatPtr(t, remarks[1].Value, 0.25, "value")
 }
 
+func TestRemarkParserSmallHailMPrefix(t *testing.T) {
+	metar, err := ParseMetar("KJFK 121751Z 18005KT 10SM FEW020 15/10 A2992 RMK GR M1/4", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeSmallHailSize {
+			found = true
+			assertEqual(t, r.Type, RemarkTypeSmallHailSize, "type")
+			assertFloatPtr(t, r.Value, 0.25, "value")
+			assertNotNil(t, r.Description, "description")
+		}
+	}
+	if !found {
+		t.Fatal("expected SmallHailSize remark")
+	}
+}
+
+func TestRemarkParserHailSizeQuarter(t *testing.T) {
+	metar, err := ParseMetar("KJFK 121751Z 18005KT 10SM FEW020 15/10 A2992 RMK GR 1/4", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeHailSize {
+			found = true
+			assertEqual(t, r.Type, RemarkTypeHailSize, "type")
+			assertFloatPtr(t, r.Value, 0.25, "value")
+		}
+	}
+	if !found {
+		t.Fatal("expected HailSize remark")
+	}
+}
+
+func TestRemarkParserHailSizeMixed(t *testing.T) {
+	metar, err := ParseMetar("KJFK 121751Z 18005KT 10SM FEW020 15/10 A2992 RMK GR 1 3/4", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	var found bool
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeHailSize {
+			found = true
+			assertEqual(t, r.Type, RemarkTypeHailSize, "type")
+			assertFloatPtr(t, r.Value, 1.75, "value")
+		}
+	}
+	if !found {
+		t.Fatal("expected HailSize remark")
+	}
+}
+
+func TestRemarkParserHailMPrefixTokenBoundary(t *testing.T) {
+	metar, err := ParseMetar("KJFK 121751Z 18005KT 10SM FEW020 15/10 A2992 RMK GR M1/4X", nil)
+	if err != nil {
+		t.Fatalf("ParseMetar error: %v", err)
+	}
+	for _, r := range metar.Remarks {
+		if r.Type == RemarkTypeSmallHailSize || r.Type == RemarkTypeHailSize {
+			t.Fatalf("unexpected hail/small hail remark for GR M1/4X: type=%v value=%v", r.Type, r.Value)
+		}
+	}
+}
+
 func TestRemarkParserSnowPellets(t *testing.T) {
 	parser := newRemarkParser(DefaultLocale())
 	remarks := parser.Parse("AO1 GS MOD")

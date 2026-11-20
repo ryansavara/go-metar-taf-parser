@@ -233,10 +233,10 @@ func (c *thunderStormLocationRemarkCommand) Execute(code string, remarks []Remar
 }
 
 // ============================================================
-// SmallHailSizeCommand: GR LESS THAN <size>
+// SmallHailSizeCommand: GR LESS THAN <size> or GR M<fraction>
 // ============================================================
 
-var smallHailRe = regexp.MustCompile(`^GR LESS THAN ((\d )?(\d\/\d)?)`)
+var smallHailRe = regexp.MustCompile(`^GR (?:LESS THAN ((\d )?(\d\/\d)?)|M(\d\/\d)(?:\s|$))`)
 
 type smallHailSizeRemarkCommand struct {
 	locale Locale
@@ -253,11 +253,17 @@ func (c *smallHailSizeRemarkCommand) Execute(code string, remarks []Remark) (str
 	if m == nil {
 		return code, remarks, errMatchNotFound
 	}
-	size, err := convertFractionalAmount(m[1])
+	var sizeStr string
+	if m[4] != "" {
+		sizeStr = m[4]
+	} else {
+		sizeStr = m[1]
+	}
+	size, err := convertFractionalAmount(sizeStr)
 	if err != nil {
 		return code, remarks, err
 	}
-	desc := remarkDesc(c.locale, "Remark.Hail.LesserThan", m[1])
+	desc := remarkDesc(c.locale, "Remark.Hail.LesserThan", sizeStr)
 	remarks = append(remarks, Remark{
 		Type:        RemarkTypeSmallHailSize,
 		Description: desc,
