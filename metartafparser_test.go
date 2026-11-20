@@ -1293,3 +1293,27 @@ func TestParseMetarDatedNonUTCOffsetMatchesUTC(t *testing.T) {
 
 	assertEqual(t, localMetar.Issued, utcMetar.Issued, "issued")
 }
+
+func TestMetarParserRejectsOutOfRangeDeliveryTime(t *testing.T) {
+	input := "METAR KJFK 329999Z 18003KT 10SM FEW015 10/08 A2992"
+	_, err := ParseMetar(input, nil)
+	if err == nil {
+		t.Fatal("expected parse error for day 32, got nil")
+	}
+	var tsErr *TimestampOutOfBoundsError
+	if !errors.As(err, &tsErr) {
+		t.Fatalf("expected TimestampOutOfBoundsError, got %T: %v", err, err)
+	}
+}
+
+func TestMetarParserRejectsOutOfRangeMinute(t *testing.T) {
+	input := "METAR KJFK 121760Z 18003KT 10SM FEW015 10/08 A2992"
+	_, err := ParseMetar(input, nil)
+	if err == nil {
+		t.Fatal("expected parse error for minute 60, got nil")
+	}
+	var tsErr *TimestampOutOfBoundsError
+	if !errors.As(err, &tsErr) {
+		t.Fatalf("expected TimestampOutOfBoundsError, got %T: %v", err, err)
+	}
+}

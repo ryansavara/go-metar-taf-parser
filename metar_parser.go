@@ -54,7 +54,10 @@ func (p *metarParser) Parse(input string) (*Metar, error) {
 		return nil, NewParseError("Unexpected end of input after station")
 	}
 
-	timeVals := parseDeliveryTime(tokens[idx])
+	timeVals, err := parseDeliveryTime(tokens[idx])
+	if err != nil {
+		return nil, err
+	}
 	if timeVals != nil {
 		idx++
 	}
@@ -123,7 +126,8 @@ func (p *metarParser) Parse(input string) (*Metar, error) {
 // falls back to skipping leading flags.
 func findMetarStation(tokens []string, idx int) int {
 	for i := idx; i+1 < len(tokens); i++ {
-		if !isStation(tokens[i]) || parseDeliveryTime(tokens[i+1]) == nil {
+		t, _ := parseDeliveryTime(tokens[i+1])
+		if !isStation(tokens[i]) || t == nil {
 			continue
 		}
 		allFlags := true
@@ -254,18 +258,27 @@ type DeliveryTime struct {
 
 var deliveryTimeRe = regexp.MustCompile(`^\d{6}Z?$`)
 
-func parseDeliveryTime(s string) *DeliveryTime {
+func parseDeliveryTime(s string) (*DeliveryTime, error) {
 	if !deliveryTimeRe.MatchString(s) {
-		return nil
+		return nil, nil
 	}
 	day := atoi(s[0:2])
 	hour := atoi(s[2:4])
 	minute := atoi(s[4:6])
+	if day < 1 || day > 31 {
+		return nil, NewTimestampOutOfBoundsError("day out of range: " + s)
+	}
+	if hour < 0 || hour > 23 {
+		return nil, NewTimestampOutOfBoundsError("hour out of range: " + s)
+	}
+	if minute < 0 || minute > 59 {
+		return nil, NewTimestampOutOfBoundsError("minute out of range: " + s)
+	}
 	return &DeliveryTime{
 		Day:    &day,
 		Hour:   &hour,
 		Minute: &minute,
-	}
+	}, nil
 }
 
 func parseMetarType(s string) *MetarType {

@@ -11,7 +11,10 @@ import (
 // ============================================================
 
 func TestParseValidity(t *testing.T) {
-	v := parseValidity("3118/0124")
+	v, err := parseValidity("3118/0124")
+	if err != nil {
+		t.Fatalf("parseValidity error: %v", err)
+	}
 	assertEqual(t, v.StartDay, 31, "startDay")
 	assertEqual(t, v.StartHour, 18, "startHour")
 	assertEqual(t, v.EndDay, 1, "endDay")
@@ -87,6 +90,41 @@ func TestTAFParserRejectsLowercaseTAF(t *testing.T) {
 	)
 	if err == nil {
 		t.Fatal("expected error for lowercase TAF")
+	}
+}
+
+func TestTAFParserRejectsOutOfRangeValidity(t *testing.T) {
+	input := "TAF KJFK 121720Z 1299/1399 18005KT P6SM FEW020"
+	_, err := ParseTAF(input, nil)
+	if err == nil {
+		t.Fatal("expected parse error for hour 99, got nil")
+	}
+	var tsErr *TimestampOutOfBoundsError
+	if !errors.As(err, &tsErr) {
+		t.Fatalf("expected TimestampOutOfBoundsError, got %T: %v", err, err)
+	}
+}
+
+func TestTAFParserRejectsOutOfRangeFM(t *testing.T) {
+	input := "TAF KJFK 121720Z 1218/1324 18005KT P6SM FEW020 FM991299 18005KT P6SM FEW020"
+	_, err := ParseTAF(input, nil)
+	if err == nil {
+		t.Fatal("expected parse error for FM day 99, got nil")
+	}
+	var tsErr *TimestampOutOfBoundsError
+	if !errors.As(err, &tsErr) {
+		t.Fatalf("expected TimestampOutOfBoundsError, got %T: %v", err, err)
+	}
+}
+
+func TestTAFParserAcceptsEndHour24(t *testing.T) {
+	input := "TAF KJFK 301720Z 3018/3124 18005KT P6SM FEW020"
+	result, err := ParseTAF(input, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+	if result.Validity.EndHour != 24 {
+		t.Fatalf("expected EndHour == 24, got %d", result.Validity.EndHour)
 	}
 }
 

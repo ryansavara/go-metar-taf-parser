@@ -62,7 +62,9 @@ func (p *tafParser) Parse(input string) (*TAF, error) {
 	p.parseMaxMinTemperatures(taf, minMaxLines)
 
 	for li := 1; li < len(lines); li++ {
-		p.parseTAFLine(taf, lines[li])
+		if err := p.parseTAFLine(taf, lines[li]); err != nil {
+			return nil, err
+		}
 	}
 
 	return taf, nil
@@ -115,7 +117,10 @@ func (p *tafParser) parseTAFHeader(firstLine []string) (string, flagState, *int,
 
 	var day, hour, minute *int
 	if idx < len(firstLine) {
-		t := parseDeliveryTime(firstLine[idx])
+		t, err := parseDeliveryTime(firstLine[idx])
+		if err != nil {
+			return "", flagState{}, nil, nil, nil, Validity{}, 0, err
+		}
 		if t != nil {
 			day = t.Day
 			hour = t.Hour
@@ -132,7 +137,10 @@ func (p *tafParser) parseTAFHeader(firstLine []string) (string, flagState, *int,
 	if !validityPattern.MatchString(validityRaw) {
 		return "", flagState{}, nil, nil, nil, Validity{}, 0, NewParseError("Invalid validity format: " + validityRaw)
 	}
-	validity := parseValidity(validityRaw)
+	validity, err := parseValidity(validityRaw)
+	if err != nil {
+		return "", flagState{}, nil, nil, nil, Validity{}, 0, err
+	}
 
 	return station, flags, day, hour, minute, validity, idx, nil
 }
@@ -199,22 +207,50 @@ func parseTemperature(input string) (Temperature, error) {
 	}, nil
 }
 
-func parseValidity(input string) Validity {
+func parseValidity(input string) (Validity, error) {
 	parts := splitN(input, "/")
-	return Validity{
-		StartDay:  atoi(parts[0][0:2]),
-		StartHour: atoi(parts[0][2:]),
-		EndDay:    atoi(parts[1][0:2]),
-		EndHour:   atoi(parts[1][2:]),
+	startDay := atoi(parts[0][0:2])
+	startHour := atoi(parts[0][2:])
+	endDay := atoi(parts[1][0:2])
+	endHour := atoi(parts[1][2:])
+	if startDay < 1 || startDay > 31 {
+		return Validity{}, NewTimestampOutOfBoundsError("start day out of range: " + input)
 	}
+	if startHour < 0 || startHour > 23 {
+		return Validity{}, NewTimestampOutOfBoundsError("start hour out of range: " + input)
+	}
+	if endDay < 1 || endDay > 31 {
+		return Validity{}, NewTimestampOutOfBoundsError("end day out of range: " + input)
+	}
+	if endHour < 0 || endHour > 24 {
+		return Validity{}, NewTimestampOutOfBoundsError("end hour out of range: " + input)
+	}
+	return Validity{
+		StartDay:  startDay,
+		StartHour: startHour,
+		EndDay:    endDay,
+		EndHour:   endHour,
+	}, nil
 }
 
-func parseFromValidity(input string) FMValidity {
-	return FMValidity{
-		StartDay:     atoi(input[2:4]),
-		StartHour:    atoi(input[4:6]),
-		StartMinutes: atoi(input[6:8]),
+func parseFromValidity(input string) (FMValidity, error) {
+	startDay := atoi(input[2:4])
+	startHour := atoi(input[4:6])
+	startMinutes := atoi(input[6:8])
+	if startDay < 1 || startDay > 31 {
+		return FMValidity{}, NewTimestampOutOfBoundsError("start day out of range: " + input)
 	}
+	if startHour < 0 || startHour > 23 {
+		return FMValidity{}, NewTimestampOutOfBoundsError("start hour out of range: " + input)
+	}
+	if startMinutes < 0 || startMinutes > 59 {
+		return FMValidity{}, NewTimestampOutOfBoundsError("start minutes out of range: " + input)
+	}
+	return FMValidity{
+		StartDay:     startDay,
+		StartHour:    startHour,
+		StartMinutes: startMinutes,
+	}, nil
 }
 
 func (p *tafParser) extractLinesTokens(tafCode string) [][]string {
@@ -292,9 +328,9 @@ func isDigitsOnly(s string) bool {
 
 var probPattern = regexp.MustCompile(`^PROB\d{2}$`)
 
-func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
+func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) error {
 	if len(tokens) == 0 {
-		return
+		return nil
 	}
 
 	idx := 0
@@ -302,7 +338,10 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
 
 	switch {
 	case fmPattern.MatchString(tokens[0]):
-		fmVal := parseFromValidity(tokens[0])
+		fmVal, err := parseFromValidity(tokens[0])
+		if err != nil {
+			return err
+		}
 		trend = TAFTrend{
 			BaseTAFTrend: BaseTAFTrend{
 				Type:     WeatherChangeTypeFM,
@@ -312,7 +351,7 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
 		}
 	case strings.HasPrefix(tokens[0], "PROB"):
 		if len(tokens) < 2 {
-			return
+			return nil
 		}
 		prob := atoi(tokens[0][4:])
 
@@ -320,13 +359,16 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
 		var foundValidity *Validity
 		for i := validityIdx; i < len(tokens); i++ {
 			if validityPattern.MatchString(tokens[i]) {
-				v := parseValidity(tokens[i])
+				v, err := parseValidity(tokens[i])
+				if err != nil {
+					return err
+				}
 				foundValidity = &v
 				break
 			}
 		}
 		if foundValidity == nil {
-			return
+			return nil
 		}
 
 		trend = TAFTrend{
@@ -362,13 +404,16 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
 		var foundValidity *Validity
 		for i := validityIdx; i < len(tokens); i++ {
 			if validityPattern.MatchString(tokens[i]) {
-				v := parseValidity(tokens[i])
+				v, err := parseValidity(tokens[i])
+				if err != nil {
+					return err
+				}
 				foundValidity = &v
 				break
 			}
 		}
 		if foundValidity == nil {
-			return
+			return nil
 		}
 
 		var wt WeatherChangeType
@@ -380,7 +425,7 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
 		case "BECMG":
 			wt = WeatherChangeTypeBECMG
 		default:
-			return
+			return nil
 		}
 
 		trend = TAFTrend{
@@ -394,6 +439,7 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) {
 
 	p.parseTAFTrend(idx, tokens, &trend)
 	taf.Trends = append(taf.Trends, trend)
+	return nil
 }
 
 func (p *tafParser) parseTAFTrend(index int, tokens []string, trend *TAFTrend) {
