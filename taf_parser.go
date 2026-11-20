@@ -391,11 +391,19 @@ func (p *tafParser) extractLinesTokens(tafCode string) [][]string {
 func splitTAFTrendLines(s string) []string {
 	var parts []string
 	start := 0
+	inRemark := false
 	for i := range len(s) {
 		if s[i] != ' ' {
 			continue
 		}
 		rest := s[i+1:]
+		if !inRemark && isRemarkTokenStart(rest) {
+			inRemark = true
+			continue
+		}
+		if inRemark {
+			continue
+		}
 		if isTAFTrendStart(rest) {
 			parts = append(parts, s[start:i])
 			start = i + 1
@@ -416,6 +424,10 @@ func splitTAFTrendLines(s string) []string {
 		joined = append(joined, parts[i])
 	}
 	return joined
+}
+
+func isRemarkTokenStart(s string) bool {
+	return s == remarkStr || strings.HasPrefix(s, remarkStr+" ")
 }
 
 func isTAFTrendStart(s string) bool {
@@ -448,9 +460,26 @@ func isDigitsOnly(s string) bool {
 
 var probPattern = regexp.MustCompile(`^PROB\d{2}$`)
 
+func findRemarkIndex(tokens []string) int {
+	for i, tok := range tokens {
+		if tok == remarkStr {
+			return i
+		}
+	}
+	return -1
+}
+
 func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) error {
 	if len(tokens) == 0 {
 		return nil
+	}
+
+	rmkIdx := findRemarkIndex(tokens)
+	var rawTokens []string
+	if rmkIdx >= 0 {
+		rawTokens = tokens[:rmkIdx]
+	} else {
+		rawTokens = tokens
 	}
 
 	idx := 0
@@ -465,7 +494,7 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) error {
 		trend = TAFTrend{
 			BaseTAFTrend: BaseTAFTrend{
 				Type:     WeatherChangeTypeFM,
-				Raw:      strings.Join(tokens, " "),
+				Raw:      strings.Join(rawTokens, " "),
 				Validity: fmVal,
 			},
 		}
@@ -495,7 +524,7 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) error {
 			BaseTAFTrend: BaseTAFTrend{
 				Type:        WeatherChangeTypePROB,
 				Probability: &prob,
-				Raw:         strings.Join(tokens, " "),
+				Raw:         strings.Join(rawTokens, " "),
 				Validity:    *foundValidity,
 			},
 		}
@@ -511,7 +540,7 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) error {
 				BaseTAFTrend: BaseTAFTrend{
 					Type:        wt,
 					Probability: &prob,
-					Raw:         strings.Join(tokens, " "),
+					Raw:         strings.Join(rawTokens, " "),
 					Validity:    *foundValidity,
 				},
 			}
@@ -551,24 +580,27 @@ func (p *tafParser) parseTAFLine(taf *TAF, tokens []string) error {
 		trend = TAFTrend{
 			BaseTAFTrend: BaseTAFTrend{
 				Type:     wt,
-				Raw:      strings.Join(tokens, " "),
+				Raw:      strings.Join(rawTokens, " "),
 				Validity: *foundValidity,
 			},
 		}
 	}
 
-	p.parseTAFTrend(idx, tokens, &trend)
+	p.parseTAFTrend(idx, tokens, &trend, taf)
 	taf.Trends = append(taf.Trends, trend)
 	return nil
 }
 
-func (p *tafParser) parseTAFTrend(index int, tokens []string, trend *TAFTrend) {
+func (p *tafParser) parseTAFTrend(index int, tokens []string, trend *TAFTrend, taf *TAF) {
 	for i := index; i < len(tokens); i++ {
 		tok := tokens[i]
 		tafCmd := p.TafSupplier.Get(tok)
 		switch {
 		case tok == remarkStr:
 			parseRemarkIntoTAFTrend(trend, tokens, i, p.Locale)
+			if taf.Remark == nil {
+				parseRemarkIntoTAF(taf, tokens, i, p.Locale)
+			}
 			return
 		case validityPattern.MatchString(tok):
 			continue

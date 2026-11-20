@@ -94,7 +94,7 @@ func TestGetForecastFromTAFBECMGContextInheritance(t *testing.T) {
 	}
 	fc := getForecastFromTAF(taf)
 
-	assertEqual(t, len(fc.Forecast), 4, "forecast length")
+	assertEqual(t, len(fc.Forecast), 3, "forecast length")
 
 	f0 := fc.Forecast[0]
 	assertEqual(t, len(f0.Clouds), 2, "f0.clouds")
@@ -119,15 +119,6 @@ func TestGetForecastFromTAFBECMGContextInheritance(t *testing.T) {
 	assertEqual(t, len(f2.Remarks), 1, "f2.remarks")
 	if f2.Visibility != nil {
 		assertEqual(t, f2.Visibility.Value, float64(5000), "f2.vis")
-	}
-
-	// BECMG 2: clouds change, inherits vis
-	f3 := fc.Forecast[3]
-	assertEqual(t, len(f3.Clouds), 2, "f3.clouds")
-	assertEqual(t, len(f3.WeatherConditions), 1, "f3.wc")
-	assertEqual(t, len(f3.Remarks), 0, "f3.remarks")
-	if f3.Visibility != nil {
-		assertEqual(t, f3.Visibility.Value, float64(5000), "f3.vis")
 	}
 }
 

@@ -865,7 +865,26 @@ func TestTAFParserRemark(t *testing.T) {
 	}
 	assertNil(t, result.Auto, "auto")
 	assertNotNil(t, result.Remark, "remark")
-	assertEqual(t, len(result.Remarks), 2, "remarks len")
+	assertEqual(t, len(result.Trends), 0, "trends (trends after RMK not split)")
+	if len(result.Remarks) < 2 {
+		t.Errorf("remarks len: got %d, want at least 2", len(result.Remarks))
+	}
+	foundFCST := false
+	foundNXT := false
+	for _, r := range result.Remarks {
+		if r.Type == RemarkTypeUnknown && strings.Contains(r.Raw, "FCST BASED ON AUTO OBS") {
+			foundFCST = true
+		}
+		if r.Type == RemarkTypeNextForecastBy {
+			foundNXT = true
+		}
+	}
+	if !foundFCST {
+		t.Error("expected FCST remark")
+	}
+	if !foundNXT {
+		t.Error("expected NXT remark")
+	}
 }
 
 func TestTAFParserTrendRemark(t *testing.T) {
@@ -942,14 +961,56 @@ func TestTAFParserInterProbability(t *testing.T) {
 	}
 }
 
-func TestTAFParserStopsWCRemark(t *testing.T) {
-	code := "TAF CYTL 121940Z 1220/1308 RMK FCST BASED ON AUTO OBS. FCST BASED ON OBS BY OTHER SRCS. WIND SENSOR INOP. NXT FCST BY 130200Z TEMPO 1303/1308 2SM -SN"
+func TestTAFParserKeepsFMInRMK(t *testing.T) {
+	const code = "TAF YMAY 022230Z 0300/0312 35010KT CAVOK FM030800 31018KT 9999 SHRA BKN025 OVC100 INTER 0308/0312 31020G40KT 3000 +TSRA BKN010 SCT040CB RMK FM030600 MOD TURB BLW 5000FT T 23 24 28 33 Q 1012 1013 1014 1009"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+	assertEqual(t, len(result.Trends), 2, "trends")
+	for _, trend := range result.Trends {
+		if strings.Contains(trend.Raw, "MOD TURB") {
+			t.Errorf("trend raw text unexpectedly contains remark: %q", trend.Raw)
+		}
+	}
+	assertNotNil(t, result.Remark, "remark")
+	if result.Remark != nil {
+		if !strings.Contains(*result.Remark, "FM030600 MOD TURB BLW 5000FT") {
+			t.Errorf("remark missing turbulence text: %q", *result.Remark)
+		}
+		if !strings.Contains(*result.Remark, "Q 1012 1013 1014 1009") {
+			t.Errorf("remark missing pressure text: %q", *result.Remark)
+		}
+	}
+}
+
+func TestTAFParserRMKOnlyNoTrend(t *testing.T) {
+	const code = "TAF YMAY 022230Z 0300/0312 35010KT CAVOK RMK FM030600 MOD TURB BLW 5000FT"
+	result, err := ParseTAF(code, nil)
+	if err != nil {
+		t.Fatalf("ParseTAF error: %v", err)
+	}
+	assertEqual(t, len(result.Trends), 0, "trends")
+	assertNotNil(t, result.Remark, "remark")
+	if result.Remark != nil && !strings.Contains(*result.Remark, "FM030600 MOD TURB BLW 5000FT") {
+		t.Errorf("remark missing turbulence text: %q", *result.Remark)
+	}
+}
+
+func TestTAFParserKeepsTrendBeforeRMK(t *testing.T) {
+	const code = "TAF CYTL 121940Z 1220/1308 TEMPO 1303/1308 2SM -SN RMK FCST BASED ON AUTO OBS. FCST BASED ON OBS BY OTHER SRCS. WIND SENSOR INOP. NXT FCST BY 130200Z"
 	result, err := ParseTAF(code, nil)
 	if err != nil {
 		t.Fatalf("ParseTAF error: %v", err)
 	}
 	assertEqual(t, len(result.Trends), 1, "trends")
-	assertEqual(t, len(result.WeatherConditions), 0, "wc")
+	if len(result.Trends) > 0 {
+		assertEqual(t, result.Trends[0].Type, WeatherChangeTypeTEMPO, "trend[0].type")
+	}
+	assertNotNil(t, result.Remark, "remark")
+	if result.Remark != nil && !strings.Contains(*result.Remark, "FCST BASED ON AUTO OBS") {
+		t.Errorf("remark missing forecast text: %q", *result.Remark)
+	}
 }
 
 func TestTAFParserStopsWCTrendRemark(t *testing.T) {
