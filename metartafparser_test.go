@@ -1059,6 +1059,65 @@ func TestMetarParserRunwayMaxRange(t *testing.T) {
 }
 
 // ============================================================
+// NCD cloud quantity regression tests
+// ============================================================
+
+func TestMetarParserNCD(t *testing.T) {
+	input := "METAR COR EGLL 031020Z AUTO 07007KT 030V100 9999 NCD 12/08 Q1026 NOSIG="
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+	if len(result.Clouds) == 0 {
+		t.Fatal("expected one cloud, got none")
+	}
+	assertEqual(t, result.Clouds[0].Quantity, CloudQuantityNCD, "cloud.quantity")
+	assertNil(t, result.Clouds[0].Height, "cloud.height should be nil for NCD")
+}
+
+func TestMetarParserNCDBeforeTemperatureAndPressure(t *testing.T) {
+	input := "METAR LSZH 061950Z AUTO 10002KT 9999NDV NCD 01/M00 Q1015"
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+	if len(result.Clouds) == 0 {
+		t.Fatal("expected one cloud, got none")
+	}
+	assertEqual(t, result.Clouds[0].Quantity, CloudQuantityNCD, "cloud.quantity")
+	assertNil(t, result.Clouds[0].Height, "cloud.height should be nil for NCD")
+	assertNotNil(t, result.Temperature, "temperature")
+	assertNotNil(t, result.DewPoint, "dewPoint")
+	assertNotNil(t, result.Altimeter, "altimeter")
+}
+
+func TestMetarParserNCDBeforeRMK(t *testing.T) {
+	input := "METAR COR EGLL 031020Z AUTO 07007KT 030V100 9999 NCD 12/08 Q1026 RMK AO2"
+	result, err := ParseMetar(input, nil)
+	if err != nil {
+		t.Fatalf("ParseMetar(%q) error: %v", input, err)
+	}
+	if len(result.Clouds) == 0 {
+		t.Fatal("expected one cloud, got none")
+	}
+	assertEqual(t, result.Clouds[0].Quantity, CloudQuantityNCD, "cloud.quantity")
+	assertNil(t, result.Clouds[0].Height, "cloud.height should be nil for NCD")
+	if len(result.Remarks) == 0 {
+		t.Fatal("expected at least one remark, got none")
+	}
+	foundAO2 := false
+	for _, r := range result.Remarks {
+		if r.Type == RemarkTypeAO2 {
+			foundAO2 = true
+			break
+		}
+	}
+	if !foundAO2 {
+		t.Error("expected AO2 remark to be parsed")
+	}
+}
+
+// ============================================================
 // isValidPhenomenon coverage
 // ============================================================
 

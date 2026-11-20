@@ -18,6 +18,7 @@ const (
 	CloudQuantitySCT CloudQuantity = "SCT"
 	CloudQuantityOVC CloudQuantity = "OVC"
 	CloudQuantityNSC CloudQuantity = "NSC"
+	CloudQuantityNCD CloudQuantity = "NCD"
 )
 
 // CloudType classifies cloud types (e.g., Cumulonimbus, Stratus, etc.).

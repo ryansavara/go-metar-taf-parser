@@ -32,7 +32,7 @@ type cloudCommand struct{}
 
 func isValidCloudQuantity(s string) bool {
 	switch CloudQuantity(s) {
-	case CloudQuantitySKC, CloudQuantityFEW, CloudQuantitySCT, CloudQuantityBKN, CloudQuantityOVC, CloudQuantityNSC:
+	case CloudQuantitySKC, CloudQuantityFEW, CloudQuantitySCT, CloudQuantityBKN, CloudQuantityOVC, CloudQuantityNSC, CloudQuantityNCD:
 		return true
 	}
 	return false

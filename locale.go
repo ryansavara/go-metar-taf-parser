@@ -71,6 +71,7 @@ func buildCloudQuantityLocale() map[string]any {
 	return Locale{
 		"BKN": "broken",
 		"FEW": "few",
+		"NCD": "no cloud detected",
 		"NSC": "no significant clouds.",
 		"OVC": "overcast",
 		"SCT": "scattered",

@@ -139,7 +139,7 @@ type Cloud struct {
 	Type *CloudType `json:"type,omitempty"`
 	// Secondary cloud type.
 	SecondaryType *CloudType `json:"secondaryType,omitempty"`
-	// Cloud coverage quantity (FEW, SCT, BKN, OVC, etc.).
+	// Cloud coverage quantity (FEW, SCT, BKN, OVC, NSC, NCD, etc.).
 	Quantity CloudQuantity `json:"quantity"`
 }
 

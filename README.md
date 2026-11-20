@@ -427,6 +427,7 @@ type Locale map[string]any
 | `CloudQuantityBKN` | `"BKN"` — Broken (5–7 oktas) |
 | `CloudQuantityOVC` | `"OVC"` — Overcast (8 oktas) |
 | `CloudQuantityNSC` | `"NSC"` — No significant clouds |
+| `CloudQuantityNCD` | `"NCD"` — No cloud detected |
 
 ### Cloud Type (`CloudType`)
 
